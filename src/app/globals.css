@@ -1,26 +1,156 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "SessionsGuide";
+  src:
+    url("/fonts/SessionsGuide.woff2") format("woff2"),
+    url("/fonts/SessionsGuide.woff") format("woff"),
+    url("/fonts/SessionsGuide.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg:      #eae5df;
+  --color-olive:   #444732;
+  --color-dark:    #111111;
+  --color-light:   #ffffff;
+  --color-border:  #D9D5CF;
+  --color-surface: #EDEAE5;
+  --color-hero-overlay: rgba(30, 18, 1, 0.10); /* 10% black wash over hero banners */
+
+  --font-display:  "SessionsGuide", Arial, sans-serif;
+  --font-heading:  "itc-avant-garde-gothic-pro", Arial, sans-serif;
+  --font-ui:       "degular-mono", monospace;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-bg:      var(--color-bg);
+  --color-olive:   var(--color-olive);
+  --color-dark:    var(--color-dark);
+  --color-light:   var(--color-light);
+  --color-border:  var(--color-border);
+  --color-surface: var(--color-surface);
+  --color-hero-overlay: var(--color-hero-overlay);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display:  var(--font-display);
+  --font-heading:  var(--font-heading);
+  --font-ui:       var(--font-ui);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-dark);
+  font-family: var(--font-heading);
+  font-weight: 300;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 5vw, 4rem);
+  line-height: 1.05;
+  color: var(--color-olive);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-family: var(--font-heading);
+  font-weight: 100;
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+h3 {
+  font-family: var(--font-heading);
+  font-weight: 300;
+  font-size: clamp(1.1rem, 2vw, 1.75rem);
+  line-height: 1.15;
+}
+
+h4 {
+  font-family: var(--font-heading);
+  font-weight: 300;
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+h5,
+h6 {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+p {
+  font-family: var(--font-heading);
+  font-weight: 300;
+  font-size: 0.95rem;
+    letter-spacing: 0.02em;
+  line-height: 1.65;
+}
+
+.caption,
+.label {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.btn-primary {
+  background-color: var(--color-olive);
+  color: var(--color-light);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-olive);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.75rem 1.5rem;
+  border: 1.5px solid var(--color-olive);
+  cursor: pointer;
+}
+
+/* Header menu icons — masked so they take a palette token regardless of any
+   fill baked into the SVG. */
+.hamburger-icon,
+.menu-close-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  background-color: var(--color-dark);
+}
+.hamburger-icon {
+  -webkit-mask: url('/hamburger.svg') center / contain no-repeat;
+          mask: url('/hamburger.svg') center / contain no-repeat;
+}
+.menu-close-icon {
+  -webkit-mask: url('/x.svg') center / contain no-repeat;
+          mask: url('/x.svg') center / contain no-repeat;
+}
+
+/* Holding page modality list — DM Mono, subordinate to the heading. */
+.modality-list {
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  line-height: 1.9;
+  color: var(--color-light);
+  opacity: 0.6;
 }

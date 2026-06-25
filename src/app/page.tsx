@@ -1,65 +1,158 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Image from 'next/image'
+
+// Pre-launch holding page. Self-contained: the root layout injects no header
+// or nav, so no layout override is needed. All colors/fonts come from CSS
+// variables (Tailwind tokens); black/white overlays use token opacities.
+
+const LABEL_CLASS =
+  'font-ui text-[0.7rem] uppercase tracking-[0.08em] text-light/70'
+const FIELD_CLASS =
+  'font-ui text-[0.75rem] bg-white/10 border border-white/30 text-light placeholder:text-light/50 px-4 py-[0.65rem] outline-none focus:border-white/60'
+const SUBMIT_CLASS =
+  'font-ui text-[0.75rem] uppercase tracking-[0.08em] bg-light text-olive border-none px-5 py-[0.65rem] cursor-pointer'
+
+const MODALITIES =
+  'REIKI + ASTROLOGY + COACHING + DOULA + BODYWORK + ACUPUNCTURE + AYURVEDA + JOURNEYS + BREATH WORK + SOUND HEALING + EQUINE THERAPY + TAROT + HUMAN DESIGN + HERBALISM + HYPNOSIS + NATURAL BEAUTY + CEREMONY + MORE'
+
+export default function HoldingPage() {
+  const router = useRouter()
+
+  const [email, setEmail] = useState('')
+  const [waitlistState, setWaitlistState] = useState<'idle' | 'pending' | 'done' | 'error'>('idle')
+
+  const [code, setCode] = useState('')
+  const [codeState, setCodeState] = useState<'idle' | 'pending' | 'invalid'>('idle')
+
+  const submitWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setWaitlistState('pending')
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const json = await res.json()
+      setWaitlistState(res.ok && json.ok ? 'done' : 'error')
+    } catch {
+      setWaitlistState('error')
+    }
+  }
+
+  const submitCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCodeState('pending')
+    try {
+      const res = await fetch('/api/verify-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      const json = await res.json()
+      if (json.valid) {
+        router.push('/join')
+        return
+      }
+      setCodeState('invalid')
+    } catch {
+      setCodeState('invalid')
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="relative min-h-screen w-full">
+      {/* Background image */}
+      <Image
+        src="/images/hero.jpg"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover"
+      />
+      {/* Dark overlay */}
+      <div className="absolute inset-0 z-[1] bg-black/25" />
+
+      {/* Content */}
+      <div className="relative z-[2] flex min-h-screen flex-col items-center justify-center px-8 text-center">
+        {/* Logo sits outside the 600px text column so it can be 60% of the
+            viewport width and stay centered at any screen size. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/sessions-logo-light.svg"
+          alt="sessions.guide"
+          className="mb-8 block w-[60vw] max-w-none"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+        <div className="w-full max-w-[600px]">
+          <h2 className="mb-3 text-light">
+            {"Designed to make light workers' work lighter"}
+          </h2>
+
+          <p className="mb-7 text-light/80">
+            Book sessions in the transformational and healing arts.
           </p>
+
+          <p className="modality-list mb-10">{MODALITIES}</p>
+
+          <hr className="mx-auto mb-10 w-[120px] border-0 border-t border-light/20" />
+
+          {/* Waitlist */}
+          <div className="mb-8">
+            {waitlistState === 'done' ? (
+              <p className={`${LABEL_CLASS} text-light/80`}>{"You're on the list."}</p>
+            ) : (
+              <>
+                <p className={`${LABEL_CLASS} mb-[0.6rem]`}>APPLY FOR AN INVITATION</p>
+                <form onSubmit={submitWaitlist} className="flex flex-col gap-0 sm:flex-row">
+                  <input
+                    type="email"
+                    required
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={`${FIELD_CLASS} flex-1`}
+                  />
+                  <button type="submit" className={SUBMIT_CLASS} disabled={waitlistState === 'pending'}>
+                    APPLY
+                  </button>
+                </form>
+                {waitlistState === 'error' && (
+                  <p className={`${LABEL_CLASS} mt-[0.6rem] text-light/80`}>
+                    Something went wrong. Try again.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Invitation code */}
+          <div className="mb-8">
+            <p className={`${LABEL_CLASS} mb-[0.6rem]`}>ENTER INVITATION CODE</p>
+            <form onSubmit={submitCode} className="flex flex-col items-center gap-0 sm:flex-row sm:justify-center">
+              <input
+                type="text"
+                placeholder="-"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className={`${FIELD_CLASS} w-full uppercase tracking-[0.1em] sm:w-[220px]`}
+              />
+              <button type="submit" className={SUBMIT_CLASS} disabled={codeState === 'pending'}>
+                ENTER
+              </button>
+            </form>
+            {codeState === 'invalid' && (
+              <p className={`${LABEL_CLASS} mt-[0.6rem] text-light/80`}>
+                {"That code isn't recognised."}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+      </div>
+    </main>
+  )
 }
