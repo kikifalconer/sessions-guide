@@ -226,6 +226,36 @@ Nav links live in a config array typed `NavLink = { label: string; href: string;
 
 ---
 
+## D13 — City Entity: Derive-On-The-Fly from Blocks, No Cities Table (June 2026)
+
+**Decision:** Cities are not a stored entity. `/in/[city]` and the search city filter derive cities at query time from `availability_blocks`: a city slug is `slugify(cityLabel(location_display))` over published active in-person/`both` blocks; the city center is the centroid of the blocks whose label slugifies to that slug (`deriveCityCenter`); inclusion is an in-JS haversine radius (bounding-box prefilter on numeric `location_lat`/`location_lng` + exact distance, `CITY_RADIUS_KM = 50`) via `resolveByCenter`. No `cities` table, no PostGIS, no migration.
+
+**Rationale:** At decision time the platform had one practitioner and seeded blocks; a canonical cities table (stable slugs, geocoded centers, `place_id`) plus block-level `city_id` and a backfill is multi-city infrastructure with no organic data to validate against. Deriving from blocks ships discovery now with zero schema change and reuses the same `availability_blocks` location data the rest of discovery already reads.
+
+**Implications:** City pages and the search location filter share `deriveCityCenter` / `resolveByCenter` (one geo spine). City labels are only as canonical as practitioners' `location_display` strings. The scale-correctness debt (a cities table + optional PostGIS, revisited when organic multi-city data exists) is tracked in **TD4** — not duplicated here.
+
+---
+
+## D14 — Rating Aggregation: In-App, Batched Per List, No View/Cached Column (June 2026)
+
+**Decision:** Average rating and published-review count are computed in application code, never per-card and never from a stored aggregate. For result-card lists (category/city/search), `hydrateCards` in `src/lib/discovery.ts` issues ONE batched `reviews` query for the whole id set (`is_published = true`, `.in('practitioner_id', ids)`) and folds it into a `Map` of `{sum, count}`; `avgRating = Math.round((sum/count)*10)/10`, `reviewCount = count`. The full-reviews page (`src/lib/reviews.ts`) computes the same `avgRating`/`reviewCount` from its own single published-only query (the list it already fetched for display), with the identical rounding. No `practitioner_rating_summary` view and no cached column were added.
+
+**Rationale:** A per-card rating query would be an N+1 across a list. A single grouped query keeps a list of any size to one reviews read; the reviews page already loads the rows it needs, so its header reuses that in-memory list rather than a second aggregate. A DB view/cached column was unnecessary at this scale and would add a write-time sync surface.
+
+**Implications:** Only `is_published = true` reviews affect any average or count. The rounding formula lives in two places (discovery cards + reviews page) and must stay in sync; a third surface should reuse one of these paths, not re-derive. Verified live this session: correct average/count, unpublished review excluded, no cross-practitioner bleed.
+
+---
+
+## D15 — Virtual Practitioners Surface on Every Location Result; In-Person-Only Removes Them (June 2026)
+
+**Decision:** On every city page and every search location result, virtual practitioners surface by default regardless of distance, unioned alongside the in-person-within-radius set (`virtualPractitionerIds`, format `virtual` or `both`, active). The in-person-only control removes the virtual set, leaving only practitioners with an active in-person/`both` block inside the radius. Both surfaces express in-person-only with one shared param, `?in_person=1` (per D19).
+
+**Rationale:** A virtual session has no geography; a seeker browsing a city should still see practitioners who can work remotely, while a seeker who wants to meet in person can exclude them. One consistent default-plus-toggle across city and search avoids two mental models for the same concept.
+
+**Implications:** A virtual-only practitioner (no in-person block) appears on every city page and falls out under in-person-only. Verified live this session against the re-seeded roster (Dia, virtual-only): present on Topanga/Santa Monica/San Diego/Ubud by default, absent under `in_person=1`. The earlier construction-only status is closed (see TD4, "D15 — VERIFIED LIVE").
+
+---
+
 ## D16 — AI Natural-Language Search: Deferred Past Phase 5 (June 2026)
 
 **Decision:** Structured search ships in Phase 5 — modality / format / location, routed through the shared discovery spine (resolvePractitionerIds + hydrateCards). The /search bar does plain filtering with no AI affordance and no Anthropic API route. AI natural-language search is deferred.
@@ -233,6 +263,20 @@ Nav links live in a config array typed `NavLink = { label: string; href: string;
 **Rationale:** The filter-extraction approach (free text → structured filters → the same resolver) is thin and reuses the spine, but it carries a live model-string dependency that must be confirmed against current docs at build time, and it is an alternate input to a structured search resolver that has to exist either way. Shipping structured search first delivers the load-bearing feature; AI is a future input layer on top, not a prerequisite.
 
 **Future upgrade:** filter-extraction — free text → structured filters → the same resolver (never raw practitioner rows as prompt context). When built, the model id must be confirmed current at build time, not pulled from memory/training. No model string is committed anywhere in this phase.
+
+---
+
+## D17 — Review Report Hook: Minimal, Built (June 2026)
+
+**Decision:** Phase 5 ships a minimal public report action, not a moderation console. Backing table `review_reports` (`id`, `review_id` FK `on delete cascade`, `reason` text nullable, `created_at`) exists as migration `0009_review_reports.sql` — append-only, no reporter PII. The server action `reportReview` (`src/app/[slug]/reviews/reportActions.ts`, service-role per TD3) verifies the target review is published (unknown/unpublished → silently `{ok:true}`, no write, no existence leak), always inserts a report row (multiple reports = stronger triage signal), and sends the admin notice (`sendReportNotice`, Resend) ONLY on the first report per review (deduped on the `review_reports` count) so repeats can't spam the inbox. UI is `ReportReview.tsx` (optional reason, calm confirmation, no exclamation, no promise of action). Practitioner self-takedown stays disallowed (per D8).
+
+**Rationale:** Auto-publish (D8) puts review bodies on the full-reviews page at volume, so a low-friction abuse signal is needed without standing up moderation tooling this phase. Append-only with a first-report-only notice gives admins a count-based triage signal at minimal cost.
+
+**Implications:** Reports accumulate with no automated effect on the review (no auto-hide). The console (acting on reports, rate-limit/auth on the action) is Phase 6.
+
+**Migration state:** `0009_review_reports` is confirmed APPLIED to the live DB this session — the `review_reports` table is queryable and all four columns (`id`, `review_id`, `reason`, `created_at`) are present, not merely present as a file.
+
+**Verification state — write path verified live; notification delivery unconfirmed:** the write path was verified live this session (rows append, dedupe-count holds, invalid/unpublished review → no write and no leak). The admin email notification (`sendReportNotice`, Resend) was NOT observed delivering — it is believed-fired by construction only (first-report-gated, fire-and-forget, no local log). Do not read this as end-to-end delivery confirmed; observing the notice land remains outstanding.
 
 ---
 
@@ -247,6 +291,16 @@ Nav links live in a config array typed `NavLink = { label: string; href: string;
 **Implications:** The `GOOGLE_CLIENT_ID` OAuth client must register `http://localhost:3000/api/google/callback` (dev) and the production equivalent as Authorized redirect URIs, with the Google Calendar API enabled and `calendar.events` + `calendar.readonly` scopes available on the consent screen.
 
 **Related (already logged above):** D6 plaintext-refresh-token debt + 2026-09-01 encryption gate; the `pending_approval` outbound-events gap. Not duplicated here.
+
+---
+
+## D19 — In-Person-Only Param Standardized to `?in_person=1` Across Surfaces (June 2026)
+
+**Decision:** The in-person-only control uses the boolean query param `?in_person=1` on BOTH the city page and the search page. The search page previously used a three-value `?format=in_person` enum (`any`/`in_person`/`virtual`); it now reads `in_person === '1'` (matching the city page exactly) and maps that boolean to the existing discovery `format` field internally (`inPersonOnly ? 'in_person' : 'any'`), so `discovery.ts` is unchanged — only the search page's param parsing and its UI control (dropdown → in-form checkbox labelled "IN PERSON ONLY") changed.
+
+**Rationale:** Two surfaces expressing the same concept with two different params (`in_person=1` vs `format=in_person`) is a consistency defect — the URLs were not interchangeable. One shared vocabulary makes `/search?city=topanga&in_person=1` and `/in/topanga?in_person=1` return the identical set.
+
+**Implications:** Those two URLs are now equivalent (verified live: Bea, Eli, Kiki). The old `/search?...&format=in_person` no longer filters — the unknown param is ignored and the default (in-person + virtual) set shows (graceful degradation, no error). Dropping the enum removed the search page's virtual-only filter — tracked as **TD7**.
 
 ---
 
@@ -317,3 +371,19 @@ Fix: requires making the dashboard tabs URL-driven (today they are client-side `
 **Gate:** Resolve before public launch / before the key sees real traffic. Same pre-launch-ops tier as TD1. Three GCP items, all on this project: (1) restrict the browser key, (2) provision a server key for the Time Zone route (coupled to #1), (3) enable the Time Zone API. Until then the cost/security exposure is contained to the invite-only phase (one unrestricted key works for both surfaces today), but timezone auto-derivation is inoperative — it falls back to the browser zone and the form warns.
 
 **Scope boundary — session-types-in-block not modeled (Phase 6 pass 2, not TD-level):** `availability-blocks.md` allows a block to optionally restrict which session types it offers. This is **not modeled in the DB** (no join table, no column). Deferred, not invented this pass — block↔session compatibility is currently by format only (`blockHostsSessionFormat`), and "all active session types" is the default. Revisit with a migration if per-block session-type restriction is wanted.
+
+## TD7 — Search lost the virtual-only filter (dropped with the format enum) (June 2026)
+
+**Situation:** The D19 param standardization removed the search page's three-value `format` enum, which included a `virtual` option backed by a live `discovery.ts` path (`virtualPractitionerIds` union + `forceVirtualLabel`, city becomes a no-op). Search can now express only "in-person + virtual" (default) or "in-person only" (`in_person=1`) — there is no longer a virtual-only filter. This matches the city page (which never had one), so the two surfaces are consistent.
+
+**Consequence:** A seeker who wants ONLY virtual sessions has no control to express that on search today. The underlying `discoverSearch` `format='virtual'` path still exists in `discovery.ts` (now unused by any UI) and could be re-exposed.
+
+**Deferred fix:** If virtual-only filtering is wanted, add it back as part of the shared format vocabulary across BOTH surfaces (so the city page gains it too, keeping parity) — e.g. a tri-state format control rather than a boolean — not by reintroducing the search-only enum that caused the D19 inconsistency.
+
+**Gate:** Not a launch blocker; an intentional scope reduction recorded so it is not silent. Revisit if seeker demand for virtual-only filtering appears.
+
+---
+
+## Phase 5 Finishing-Line Re-Verified Against a Fresh Roster (accuracy note, June 2026)
+
+The Phase 5 finishing-line behaviors (published gate, multi-practitioner category/city/search narrowing, radius include/exclude, virtual-everywhere + in-person-only toggle, psychedelic disclaimer, rating aggregation + featured-first reviews, report-hook write) were re-verified live this session against a freshly RE-SEEDED multi-practitioner roster (6 practitioners incl. virtual-only Dia, psychedelic-facilitation Eli, out-of-radius Cal, and an unpublished control). This matters for the phase-transition record because the prior "VERIFIED LIVE" claims in `current-phase.md` rested on a roster that had ALREADY been torn down — at the start of this session the live DB held only one published practitioner (Kiki, no reviews) plus one unpublished test account, so those claims were not reproducible until re-seeded. Roster re-seeded via `scripts/seed-verify.mjs` (manifest rewritten for teardown); behaviors confirmed; D19/TD7 added from this session's param fix.
