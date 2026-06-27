@@ -12,6 +12,10 @@ Running log of decisions made. Consult before generating code that touches these
 
 **TD2 — Outbound calendar events skip pending-approval bookings.** `createCalendarEventForBooking` (the outbound helper) fires only on instant and paid (Stripe-confirmed) bookings; `pending_approval` bookings get no calendar event because no approval-confirm flow exists yet. **When that flow is built it must call `createCalendarEventForBooking` on approval.** See the "Known gap — `pending_approval` never reaches `confirmed`" entry below.
 
+**TD6 — Google Places browser-key restriction breaks the server-side Time Zone call if done alone.** The browser key (`NEXT_PUBLIC_GOOGLE_PLACES_API_KEY`) must be HTTP-referrer-restricted, but that restriction BREAKS the server-side `/api/timezone` call (server requests carry no referrer) — the two changes must land together, and the Time Zone API is not yet enabled on the GCP project. **HARD pre-launch gate:** restrict the browser key + provision a separate server key + enable the Time Zone API before the key sees real traffic. Full detail in the TD6 section below.
+
+**TD9 — Resend sandbox sender blocks ALL transactional email delivery.** `RESEND_FROM_EMAIL = onboarding@resend.dev` (Resend test sender) delivers only to the account owner, so NO seeker-facing mail — booking, payment, cancellation/refund, review request, inquiry, report notice — reaches real recipients; observed live as a 403. **HARD pre-launch gate:** verify a domain and set `RESEND_FROM_EMAIL` to it before any public/seeker traffic. Full detail in the TD9 section below.
+
 ---
 
 ## Location Architecture — Path A (June 2026)
@@ -381,6 +385,26 @@ Fix: requires making the dashboard tabs URL-driven (today they are client-side `
 **Deferred fix:** If virtual-only filtering is wanted, add it back as part of the shared format vocabulary across BOTH surfaces (so the city page gains it too, keeping parity) — e.g. a tri-state format control rather than a boolean — not by reintroducing the search-only enum that caused the D19 inconsistency.
 
 **Gate:** Not a launch blocker; an intentional scope reduction recorded so it is not silent. Revisit if seeker demand for virtual-only filtering appears.
+
+## TD8 — Rating metric computed in three places, not shared code (June 2026)
+
+**Situation:** The published-review average + count is derived independently in three spots: `src/app/[slug]/page.tsx` (profile header), `src/lib/discovery.ts` `hydrateCards` (result cards), and `src/lib/reviews.ts` (full reviews page). Each filters `is_published` and aggregates the rating in JS on its own. Confirmed live in the Phase 5 runtime verification (June 2026): all three agree today (Bea 3.0 (1); Kiki's unpublished review excluded on every surface).
+
+**Consequence:** The D14 performance goal still holds — cards read the discovery aggregate, no per-card N+1 — but the metric LOGIC is triplicated and can drift. Any change to what counts (excluding a reported/flagged review, weighting, rounding rule) must be made in three places or the surfaces silently disagree on the same practitioner's rating.
+
+**Deferred fix:** Consolidate into ONE source of truth before adding a fourth surface — either a shared helper (e.g. `aggregateRatings(rows)`) all three call, or a `practitioner_rating_summary` view (`is_published` only) the reads select from. Preserve the no-N+1 property: the cards path must still get the aggregate in one batched read, not per card.
+
+**Gate:** Not a launch blocker — the three copies are correct and consistent today. Consolidate before a fourth rating surface is added, so drift never gets a chance to start. Severity: low.
+
+## TD9 — Resend sandbox sender blocks ALL transactional email delivery (June 2026)
+
+**Situation:** `RESEND_FROM_EMAIL = onboarding@resend.dev` — Resend's shared test sender, which delivers ONLY to the Resend account owner's own address (`kikifalconer@gmail.com`). Observed live in the Phase 5 report-hook runtime test (June 2026): the admin notice send reached Resend and was rejected with **HTTP 403 `validation_error`** ("You can only send testing emails to your own email address… verify a domain and change the `from` address"). The code path is correct and the send fires; the provider refuses delivery.
+
+**Consequence:** Because EVERY transactional email shares `RESEND_FROM_EMAIL`, no seeker-facing mail delivers in the current config: booking confirmation, payment receipt, cancellation/refund, review request, inquiry, and the review-report admin notice. This compounds the D1 gap — self-cancel and review depend ENTIRELY on email deliverability with no on-screen fallback — so today a guest seeker literally cannot cancel or review, because the link never arrives. Failures are silent: send errors are swallowed (`sendReportNotice` and peers catch and return), so the app reports success while nothing is delivered.
+
+**Fix:** Verify a domain at resend.com/domains and set `RESEND_FROM_EMAIL` to an address on that domain (e.g. `hello@sessions.guide` once verified). Env/config only — no code change. After the switch, re-observe one real delivery per flow; the report-hook runtime test is a repeatable harness for the notice path.
+
+**Gate:** HARD pre-launch gate. Severity: high. No public/seeker traffic until transactional mail delivers from a verified domain — same pre-launch-ops tier as TD1 (token encryption) and TD6 (Google key / Time Zone). Contained today only because the build is invite-only and the few test sends target the account owner.
 
 ---
 
