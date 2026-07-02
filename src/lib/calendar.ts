@@ -29,21 +29,31 @@ function stateSecret(): string {
   return s
 }
 
-export function signState(practitionerId: string): string {
-  const payload = Buffer.from(practitionerId).toString('base64url')
-  const sig = createHmac('sha256', stateSecret()).update(payload).digest('base64url')
-  return `${payload}.${sig}`
+// The OAuth state is HMAC-signed and carries the practitioner id, a single-use
+// nonce (mirrored in an httpOnly cookie set at connect time and consumed at the
+// callback), and an absolute expiry. The callback additionally requires the
+// logged-in user to equal `pid`, so a stolen/replayed state cannot attach a
+// victim's calendar to an attacker's account (C4).
+export type OAuthState = { pid: string; nonce: string; exp: number }
+
+export function signState(payload: OAuthState): string {
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const sig = createHmac('sha256', stateSecret()).update(body).digest('base64url')
+  return `${body}.${sig}`
 }
 
-export function verifyState(state: string): string | null {
-  const [payload, sig] = (state ?? '').split('.')
-  if (!payload || !sig) return null
-  const expected = createHmac('sha256', stateSecret()).update(payload).digest('base64url')
+export function verifyState(state: string): OAuthState | null {
+  const [body, sig] = (state ?? '').split('.')
+  if (!body || !sig) return null
+  const expected = createHmac('sha256', stateSecret()).update(body).digest('base64url')
   const a = Buffer.from(sig)
   const b = Buffer.from(expected)
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null
   try {
-    return Buffer.from(payload, 'base64url').toString('utf8')
+    const parsed = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as OAuthState
+    if (!parsed || typeof parsed.pid !== 'string' || typeof parsed.nonce !== 'string') return null
+    if (typeof parsed.exp !== 'number' || Date.now() > parsed.exp) return null // expired
+    return parsed
   } catch {
     return null
   }
