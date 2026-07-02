@@ -37,18 +37,29 @@ export default async function JoinPage() {
   let initialSecondaryIds: string[] = []
 
   if (user) {
-    let { data: practitioner } = await admin
+    const PROFILE_COLS =
+      'id, full_name, slug, tagline, bio, photo_url, banner_url, link_1, link_2, link_3, subscription_tier'
+
+    const { data: existing, error: readError } = await admin
       .from('practitioners')
-      .select(
-        'id, full_name, slug, tagline, bio, photo_url, banner_url, link_1, link_2, link_3, subscription_tier'
-      )
+      .select(PROFILE_COLS)
       .eq('id', user.id)
       .maybeSingle()
 
+    // A transient read error must NOT be treated as "no row": doing so would
+    // overwrite a live, completed profile with placeholder values (H3). Fail
+    // loudly instead of fabricating state.
+    if (readError) {
+      throw new Error('Could not load your profile. Please try again.')
+    }
+
+    let practitioner = existing
     if (!practitioner) {
       // Signed-in user without a row (e.g. interrupted OAuth flow). Create the
-      // placeholder row here so the rest of the flow has something to update.
-      const { data: inserted } = await admin
+      // placeholder row. ignoreDuplicates:true = INSERT ... ON CONFLICT DO
+      // NOTHING, so a concurrent request can never clobber an existing row
+      // (matches the sibling call sites in join/actions.ts and auth/callback).
+      await admin
         .from('practitioners')
         .upsert(
           {
@@ -57,13 +68,14 @@ export default async function JoinPage() {
             slug: user.id,
             subscription_tier: null,
           },
-          { onConflict: 'id', ignoreDuplicates: false }
+          { onConflict: 'id', ignoreDuplicates: true }
         )
-        .select(
-          'id, full_name, slug, tagline, bio, photo_url, banner_url, link_1, link_2, link_3, subscription_tier'
-        )
+      const { data: created } = await admin
+        .from('practitioners')
+        .select(PROFILE_COLS)
+        .eq('id', user.id)
         .maybeSingle()
-      practitioner = inserted
+      practitioner = created
     }
 
     if (practitioner?.subscription_tier) {
