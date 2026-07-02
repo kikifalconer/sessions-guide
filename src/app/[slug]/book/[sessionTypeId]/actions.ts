@@ -497,7 +497,7 @@ export async function finalizeBooking(bookingId: string): Promise<BookingResult>
   // hold reserves the slot, and any later external conflict is handled out of
   // band, never by declining a paid booking.
   const amountPaid = intent.amount_received / 100
-  const { error } = await admin
+  const { data: confirmedRows, error } = await admin
     .from('bookings')
     .update({
       status: 'confirmed',
@@ -506,7 +506,22 @@ export async function finalizeBooking(bookingId: string): Promise<BookingResult>
       updated_at: DateTime.utc().toISO(),
     })
     .eq('id', bookingId)
+    .eq('status', 'pending_payment') // atomic transition: only one path wins
+    .select('id')
   if (error) return { ok: false, error: GENERIC_ERROR }
+
+  // A concurrent path (client finalize vs. the payment_intent.succeeded webhook)
+  // already confirmed this booking. Return the idempotent success WITHOUT
+  // re-sending emails or re-creating the calendar event.
+  if (!confirmedRows || confirmedRows.length === 0) {
+    return {
+      ok: true,
+      bookingId,
+      status: 'confirmed',
+      locationDisplay: booking.booked_location_display,
+      whenLabel: when,
+    }
+  }
 
   // Outbound calendar event now that payment confirmed the booking. Idempotent
   // on google_event_id, so re-entry (alreadyConfirmed path) is safe. A future
