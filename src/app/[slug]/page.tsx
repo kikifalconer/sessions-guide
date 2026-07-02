@@ -87,7 +87,9 @@ export async function generateMetadata({
 }) {
   const { slug } = await params
   const profile = await fetchProfile(slug)
-  if (!profile) return { title: 'sessions.guide' }
+  // Never leak an unpublished practitioner's name/tagline via metadata: the page
+  // body 404s for non-owners, so the <head> must not identify them either (H2).
+  if (!profile || !profile.is_published) return { title: 'sessions.guide' }
   return {
     title: `${profile.full_name} | sessions.guide`,
     description: profile.tagline ?? undefined,
