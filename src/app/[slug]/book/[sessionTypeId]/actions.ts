@@ -22,6 +22,7 @@ import { sendBookingEmails } from '@/lib/email'
 import { cancelUrl } from '@/lib/siteUrl'
 import { createCalendarEventForBooking } from '@/lib/calendarSync'
 import { fetchCalendarBusyWindows } from '@/lib/calendar'
+import { cancelHeldPaymentIntent } from '@/lib/paymentIntents'
 
 const GENERIC_ERROR = 'Something went wrong. Try again or contact support.'
 const SLOT_TAKEN_ERROR = 'That time was just taken. Choose another time.'
@@ -81,13 +82,32 @@ function getStripe(): Stripe | null {
 export async function expireStaleHolds(practitionerId: string): Promise<void> {
   const admin = createAdminClient()
   const cutoff = DateTime.utc().minus({ minutes: HOLD_EXPIRY_MINUTES }).toISO()
-  await admin
+  // Return the rows we actually flipped so we cancel PIs only for real releases.
+  const { data: expired } = await admin
     .from('bookings')
     .update({ status: 'cancelled', cancellation_reason: 'payment_abandoned' })
     .eq('practitioner_id', practitionerId)
     .eq('status', 'pending_payment')
     .eq('payment_status', 'unpaid')
     .lt('created_at', cutoff)
+    .select('id, stripe_payment_intent_id')
+
+  const withPI = (expired ?? []).filter((b) => b.stripe_payment_intent_id)
+  if (withPI.length === 0) return
+
+  // All belong to this practitioner, so one Connect-account lookup covers them.
+  const { data: pr } = await admin
+    .from('practitioners')
+    .select('stripe_account_id')
+    .eq('id', practitionerId)
+    .maybeSingle()
+  const stripeAccountId = pr?.stripe_account_id ?? null
+  for (const b of withPI) {
+    await cancelHeldPaymentIntent({
+      paymentIntentId: b.stripe_payment_intent_id,
+      stripeAccountId,
+    })
+  }
 }
 
 async function loadContext(practitionerId: string, sessionTypeId: string) {
@@ -529,15 +549,32 @@ export async function finalizeBooking(bookingId: string): Promise<BookingResult>
   }
 }
 
-// Releases a hold after explicit payment failure or abandonment.
+// Releases a hold after explicit payment failure or abandonment. Cancels the
+// backing PaymentIntent on the connected account so a released hold can never
+// be charged later (C1). An already-succeeded PI is left for webhook
+// reconciliation (C2).
 export async function releaseHold(bookingId: string): Promise<void> {
   const admin = createAdminClient()
-  await admin
+  const { data: released } = await admin
     .from('bookings')
     .update({ status: 'cancelled', cancellation_reason: 'payment_abandoned' })
     .eq('id', bookingId)
     .eq('status', 'pending_payment')
     .eq('payment_status', 'unpaid')
+    .select('id, practitioner_id, stripe_payment_intent_id')
+
+  const row = released?.[0]
+  if (!row?.stripe_payment_intent_id) return
+
+  const { data: pr } = await admin
+    .from('practitioners')
+    .select('stripe_account_id')
+    .eq('id', row.practitioner_id)
+    .maybeSingle()
+  await cancelHeldPaymentIntent({
+    paymentIntentId: row.stripe_payment_intent_id,
+    stripeAccountId: pr?.stripe_account_id ?? null,
+  })
 }
 
 async function isConnectReady(
