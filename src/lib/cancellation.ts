@@ -29,6 +29,11 @@ export function computeRefund(
   amountPaid: number,
   hoursBeforeStart: number
 ): RefundComputation {
+  // A cancellation at or after the session start never earns an automatic
+  // refund. This also stops a negative hoursBeforeStart from leaking into the
+  // tier comparisons below (C3).
+  if (hoursBeforeStart <= 0) return { amount: 0, isFull: false }
+
   const full = Math.round(amountPaid * 100) / 100
   const half = Math.round(amountPaid * 50) / 100 // amountPaid * 0.5, cent-rounded
   switch (policy) {
@@ -193,6 +198,22 @@ export async function cancelBooking(args: {
       locationDisplay: booking.booked_location_display,
       sessionName: booking.session_name,
       practitionerName: booking.practitioner_name,
+    }
+  }
+
+  // A session that has already started can no longer be self-cancelled by the
+  // seeker. Status only flips to 'completed' on the hourly cron, so the
+  // 'completed' check above is not enough — guard on the actual clock so a
+  // seeker cannot cancel mid-session (or in the cron-lag window) and harvest a
+  // refund for a delivered session (C3).
+  if (
+    cancelledBy === 'seeker' &&
+    DateTime.fromISO(booking.start_datetime) <= DateTime.utc()
+  ) {
+    return {
+      ok: false,
+      error:
+        'This session has already started, so it can no longer be cancelled online. Please contact your practitioner directly.',
     }
   }
 
