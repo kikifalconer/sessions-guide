@@ -189,6 +189,34 @@ export async function fetchCalendarBusyWindows(practitionerId: string): Promise<
   }
 }
 
+// Commit-time free/busy for a single booking window, read LIVE from Google
+// (not the hourly cache). Returns { ok:false } when the practitioner has an
+// ACTIVE integration but we could not fetch busy data — callers must fail
+// closed and refuse the booking rather than risk a double-book (H1). A
+// practitioner with no integration (or a disabled one) is not a failure:
+// there is simply nothing external to check, so it returns { ok:true, busy:[] }.
+export async function liveFreeBusyForWindow(
+  practitionerId: string,
+  timeMinIso: string,
+  timeMaxIso: string
+): Promise<{ ok: true; busy: BusyWindow[] } | { ok: false }> {
+  const integration = await loadIntegration(practitionerId)
+  if (!integration || !integration.sync_enabled) return { ok: true, busy: [] }
+  try {
+    const token = await getValidAccessToken(practitionerId)
+    if (!token) return { ok: false } // active integration but token unusable
+    const busy = await queryFreeBusy(
+      token,
+      integration.calendar_id ?? 'primary',
+      timeMinIso,
+      timeMaxIso
+    )
+    return { ok: true, busy }
+  } catch {
+    return { ok: false }
+  }
+}
+
 // Free/busy windows for a calendar between two ISO instants.
 export async function queryFreeBusy(
   accessToken: string,

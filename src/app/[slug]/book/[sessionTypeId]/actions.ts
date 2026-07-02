@@ -21,11 +21,14 @@ import {
 import { sendBookingEmails } from '@/lib/email'
 import { cancelUrl } from '@/lib/siteUrl'
 import { createCalendarEventForBooking } from '@/lib/calendarSync'
-import { fetchCalendarBusyWindows } from '@/lib/calendar'
+import { fetchCalendarBusyWindows, liveFreeBusyForWindow } from '@/lib/calendar'
 import { cancelHeldPaymentIntent } from '@/lib/paymentIntents'
+import { Interval } from 'luxon'
 
 const GENERIC_ERROR = 'Something went wrong. Try again or contact support.'
 const SLOT_TAKEN_ERROR = 'That time was just taken. Choose another time.'
+const CALENDAR_UNVERIFIED_ERROR =
+  "We couldn't confirm the practitioner's calendar just now. Please try again in a moment."
 const HORIZON_DAYS = 56
 const HOLD_EXPIRY_MINUTES = 30
 const CURRENCY = 'usd' // single launch currency for now
@@ -140,13 +143,17 @@ async function loadContext(practitionerId: string, sessionTypeId: string) {
 // Re-validates a client-chosen slot server-side: the block must belong to the
 // practitioner, be active and format-compatible, and the exact start instant
 // must be generatable from the block today. Never trust a posted timestamp.
+type SlotValidation =
+  | { ok: true; block: AvailabilityBlockRow }
+  | { ok: false; reason: 'taken' | 'calendar_unverified' }
+
 async function validateSlot(
   practitionerId: string,
   sessionType: SessionTypeRow,
   blockId: string,
   startUtc: string,
   bookedFormat: 'virtual' | 'in_person'
-): Promise<AvailabilityBlockRow | null> {
+): Promise<SlotValidation> {
   const admin = createAdminClient()
   const { data } = await admin
     .from('availability_blocks')
@@ -159,12 +166,12 @@ async function validateSlot(
     .maybeSingle()
 
   const block = data as (AvailabilityBlockRow & { is_active: boolean; practitioner_id: string }) | null
-  if (!block) return null
-  if (!blockHostsSessionFormat(block.format, sessionType.format)) return null
+  if (!block) return { ok: false, reason: 'taken' }
+  if (!blockHostsSessionFormat(block.format, sessionType.format)) return { ok: false, reason: 'taken' }
 
   // The seeker's format must be one the block actually offers.
-  if (bookedFormat === 'virtual' && block.format === 'in_person') return null
-  if (bookedFormat === 'in_person' && block.format === 'virtual') return null
+  if (bookedFormat === 'virtual' && block.format === 'in_person') return { ok: false, reason: 'taken' }
+  if (bookedFormat === 'in_person' && block.format === 'virtual') return { ok: false, reason: 'taken' }
 
   const { data: existing } = await admin
     .from('bookings')
@@ -173,18 +180,37 @@ async function validateSlot(
     .neq('status', 'cancelled')
     .gte('end_datetime', DateTime.utc().toISO())
 
-  // Commit-time correctness: a slot busy on the practitioner's external Google
-  // Calendar is excluded here too. This is the enforcement point for both the
-  // instant path (createBooking) and the paid pre-charge path (createBookingHold).
-  const busy = await fetchCalendarBusyWindows(practitionerId)
-
+  // First pass: the exact instant must be generatable from the block and not
+  // overlap a platform booking. The cached calendar_busy windows are merged in
+  // as a fast display-consistent filter.
+  const busyCache = await fetchCalendarBusyWindows(practitionerId)
   const slots = generateSlots(
     [block],
-    [...(existing ?? []), ...busy] as { start_datetime: string; end_datetime: string }[],
+    [...(existing ?? []), ...busyCache] as { start_datetime: string; end_datetime: string }[],
     sessionType.duration_minutes,
     { now: DateTime.utc(), horizonDays: HORIZON_DAYS }
   )
-  return slots.some((s) => s.startUtc === startUtc) ? block : null
+  if (!slots.some((s) => s.startUtc === startUtc)) return { ok: false, reason: 'taken' }
+
+  // Commit-time correctness (H1): verify this exact window against the
+  // practitioner's LIVE Google free/busy, not just the hourly cache. FAIL
+  // CLOSED — if an active integration cannot be queried, refuse rather than
+  // risk booking over a real external event.
+  const slotStart = DateTime.fromISO(startUtc)
+  const slotEnd = slotStart.plus({ minutes: sessionType.duration_minutes })
+  const live = await liveFreeBusyForWindow(practitionerId, startUtc, slotEnd.toISO()!)
+  if (!live.ok) return { ok: false, reason: 'calendar_unverified' }
+
+  const slotInterval = Interval.fromDateTimes(slotStart, slotEnd)
+  const conflict = live.busy.some((b) =>
+    Interval.fromDateTimes(
+      DateTime.fromISO(b.start_datetime),
+      DateTime.fromISO(b.end_datetime)
+    ).overlaps(slotInterval)
+  )
+  if (conflict) return { ok: false, reason: 'taken' }
+
+  return { ok: true, block }
 }
 
 function whenLabel(startUtc: string, zone: string): string {
@@ -318,14 +344,20 @@ export async function createBooking(input: BookingInput): Promise<BookingResult>
 
   await expireStaleHolds(practitioner.id)
 
-  const block = await validateSlot(
+  const validation = await validateSlot(
     practitioner.id,
     sessionType,
     input.blockId,
     input.startUtc,
     input.bookedFormat
   )
-  if (!block) return { ok: false, error: SLOT_TAKEN_ERROR }
+  if (!validation.ok) {
+    return {
+      ok: false,
+      error: validation.reason === 'calendar_unverified' ? CALENDAR_UNVERIFIED_ERROR : SLOT_TAKEN_ERROR,
+    }
+  }
+  const block = validation.block
 
   const stripe = getStripe()
   const connectReady = await isConnectReady(stripe, practitioner.stripe_account_id)
@@ -385,14 +417,20 @@ export async function createBookingHold(input: BookingInput): Promise<HoldResult
   const amount = resolveChargeAmount(sessionType, input.requestedAmount)
   if (amount === null) return { ok: false, error: 'Choose a valid amount.' }
 
-  const block = await validateSlot(
+  const validation = await validateSlot(
     practitioner.id,
     sessionType,
     input.blockId,
     input.startUtc,
     input.bookedFormat
   )
-  if (!block) return { ok: false, error: SLOT_TAKEN_ERROR }
+  if (!validation.ok) {
+    return {
+      ok: false,
+      error: validation.reason === 'calendar_unverified' ? CALENDAR_UNVERIFIED_ERROR : SLOT_TAKEN_ERROR,
+    }
+  }
+  const block = validation.block
 
   const resolvedMode = resolveConfirmationMode(sessionType, practitioner)
   const inserted = await insertBooking(
