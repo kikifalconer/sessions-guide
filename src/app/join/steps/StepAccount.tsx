@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { signUpWithEmail } from '../actions'
 
@@ -11,9 +12,16 @@ export default function StepAccount({
   isSignedIn: boolean
   onNext: () => void
 }) {
+  const searchParams = useSearchParams()
+  // The OAuth callback redirects here with ?error=auth on a failed/declined
+  // sign-in. Surface it instead of silently dropping the user at step 1 (M6).
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    searchParams.get('error') === 'auth'
+      ? 'Google sign in did not complete. Please try again, or use email.'
+      : null
+  )
   const [pending, startTransition] = useTransition()
 
   if (isSignedIn) {
