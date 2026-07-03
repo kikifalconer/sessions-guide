@@ -140,6 +140,15 @@ export default function BookingFlow(props: Props) {
     setError(null)
     startTransition(async () => {
       if (props.chargingNow) {
+        // Guard BEFORE creating the hold + PaymentIntent: without a publishable
+        // key (or connected account) the payment step cannot render, so creating
+        // a hold would only lock the slot behind a blank screen (M4).
+        if (!props.stripePublishableKey || !props.stripeAccountId) {
+          setError(
+            'Online payment is temporarily unavailable. Please try again later, or contact the practitioner to arrange payment.'
+          )
+          return
+        }
         const held = await createBookingHold(input)
         if (!held.ok) {
           setError(held.error)
