@@ -158,24 +158,38 @@ export async function saveModalities(
     return { ok: false, error: 'One of those modalities is not available. Choose from the list.' }
   }
 
-  const { error: deleteError } = await admin
+  // Replace modalities WITHOUT an all-rows delete window that could wipe them on
+  // a partial failure or double-submit (M7). Insert-first/diff: (1) demote any
+  // existing primary — the one-primary partial unique index forbids two
+  // primaries at once, so the new primary can't be set while an old one stands;
+  // (2) upsert the desired rows so they always exist before anything is removed;
+  // (3) prune only the rows no longer selected.
+  const { error: demoteError } = await admin
     .from('practitioner_modalities')
-    .delete()
+    .update({ is_primary: false })
     .eq('practitioner_id', user.id)
+    .eq('is_primary', true)
+  if (demoteError) return { ok: false, error: GENERIC_ERROR }
 
-  if (deleteError) return { ok: false, error: GENERIC_ERROR }
-
-  const { error: insertError } = await admin
+  const { error: upsertError } = await admin
     .from('practitioner_modalities')
-    .insert(
+    .upsert(
       allIds.map((modalityId) => ({
         practitioner_id: user.id,
         modality_id: modalityId,
         is_primary: modalityId === primaryId,
-      }))
+      })),
+      { onConflict: 'practitioner_id,modality_id' }
     )
+  if (upsertError) return { ok: false, error: GENERIC_ERROR }
 
-  if (insertError) return { ok: false, error: GENERIC_ERROR }
+  const { error: pruneError } = await admin
+    .from('practitioner_modalities')
+    .delete()
+    .eq('practitioner_id', user.id)
+    .not('modality_id', 'in', `(${allIds.join(',')})`)
+  if (pruneError) return { ok: false, error: GENERIC_ERROR }
+
   return { ok: true }
 }
 
