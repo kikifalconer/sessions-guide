@@ -21,6 +21,7 @@ const REFUND_EVENTS = new Set([
   'charge.refund.updated',
   'refund.created',
   'refund.updated',
+  'refund.failed', // H7: a failed refund must not be recorded as 'refunded'
 ])
 
 type AdminClient = ReturnType<typeof createAdminClient>

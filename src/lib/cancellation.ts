@@ -331,29 +331,62 @@ export async function reconcileRefundFromEvent(event: Stripe.Event): Promise<voi
 
   let refundId: string | null = null
   let refundedDollars: number | null = null
+  let refundStatus: string | null = null
 
   if (event.type.startsWith('refund.') || event.type === 'charge.refund.updated') {
     refundId = (obj.id as string) ?? null
     if (typeof obj.amount === 'number') refundedDollars = obj.amount / 100
+    refundStatus = (obj.status as string) ?? null // succeeded | pending | failed | canceled
   } else if (event.type === 'charge.refunded') {
     if (typeof obj.amount_refunded === 'number') refundedDollars = obj.amount_refunded / 100
+    refundStatus = 'succeeded' // the charge reports money that has actually been refunded
   }
 
-  if (!bookingId || refundedDollars === null) return
+  if (!bookingId) return
 
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, payment_status, amount_refunded, stripe_refund_id')
+    .select('id, status, payment_status, amount_paid, amount_refunded, stripe_refund_id, cancelled_at')
     .eq('id', bookingId)
     .maybeSingle()
   if (!booking) return
 
-  // Already recorded with the same refund -> nothing to do (idempotent).
-  if (booking.stripe_refund_id && booking.stripe_refund_id === refundId) return
+  // A refund that FAILED (or was canceled) did NOT return money. Never record it
+  // as 'refunded'. Undo any optimistic 'refunded' marker the synchronous cancel
+  // path wrote, and log loudly so support can intervene — the seeker was already
+  // told a refund was on its way (H7).
+  if (refundStatus === 'failed' || refundStatus === 'canceled') {
+    console.error(
+      '[refund] LOUD: Stripe reported a FAILED/CANCELED refund — money was NOT returned',
+      { bookingId, refundId, eventType: event.type }
+    )
+    if (booking.payment_status === 'refunded') {
+      await admin
+        .from('bookings')
+        .update({
+          // Money is still with the practitioner; reflect that truthfully.
+          payment_status: (booking.amount_paid ?? 0) > 0 ? 'paid' : booking.payment_status,
+          amount_refunded: 0,
+          updated_at: DateTime.utc().toISO(),
+        })
+        .eq('id', bookingId)
+    }
+    return
+  }
+
+  // Only a SUCCEEDED refund is recorded. pending / requires_action are ignored;
+  // a later terminal event (succeeded or failed) will reconcile.
+  if (refundStatus !== 'succeeded' || refundedDollars === null) return
 
   await admin
     .from('bookings')
     .update({
+      // Ensure the booking is cancelled so the completion/review cron never
+      // fires reminders on a refunded session (paired MEDIUM). Idempotent for a
+      // normally-cancelled booking; heals a booking whose synchronous cancel
+      // write failed after the refund succeeded.
+      status: 'cancelled',
+      cancelled_at: booking.cancelled_at ?? DateTime.utc().toISO(),
       payment_status: 'refunded',
       amount_refunded: refundedDollars,
       stripe_refund_id: refundId ?? booking.stripe_refund_id,
