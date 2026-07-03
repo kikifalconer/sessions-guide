@@ -1,6 +1,8 @@
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { INVITE_COOKIE, isValidInviteCode } from '@/lib/invite'
 import JoinFlow, { type ModalityOption, type PractitionerPrefill } from './JoinFlow'
 
 export const metadata = {
@@ -12,6 +14,17 @@ export default async function JoinPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // Invite gate (H4): a visitor who is not already signed in must hold a valid
+  // invite cookie (set by /api/verify-invite). This keeps the whole signup entry
+  // — email form AND the Google button — behind the invite during the
+  // invite-only phase. Signed-in users are already onboarding, so they pass.
+  if (!user) {
+    const cookieStore = await cookies()
+    if (!isValidInviteCode(cookieStore.get(INVITE_COOKIE)?.value)) {
+      redirect('/')
+    }
+  }
 
   const admin = createAdminClient()
 

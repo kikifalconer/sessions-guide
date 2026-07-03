@@ -1,9 +1,11 @@
 'use server'
 
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateUniqueSlug } from '@/lib/slug'
+import { INVITE_COOKIE, isValidInviteCode } from '@/lib/invite'
 
 export type ActionResult = { ok: boolean; error?: string }
 
@@ -38,6 +40,17 @@ export async function signUpWithEmail(
   }
   if (password.length < 8) {
     return { ok: false, error: 'Use a password with at least 8 characters.' }
+  }
+
+  // Hard server-side invite gate (H4): re-validate the invite cookie set by
+  // /api/verify-invite against INVITE_CODES. The client-side check is not
+  // trusted — without a currently-valid invite, no account is created.
+  const cookieStore = await cookies()
+  if (!isValidInviteCode(cookieStore.get(INVITE_COOKIE)?.value)) {
+    return {
+      ok: false,
+      error: 'You need a valid invitation to create an account.',
+    }
   }
 
   const supabase = await createClient()
