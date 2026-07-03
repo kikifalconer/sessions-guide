@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadIntegration } from '@/lib/calendar'
+import SiteHeader from '@/components/site-header'
 import DashboardShell from './DashboardShell'
 
 export const metadata = {
@@ -119,8 +120,12 @@ export default async function DashboardPage() {
   }
 
   return (
-    <DashboardShell
-      fullName={practitioner.full_name}
+    <>
+      {/* Shared site header (logo left, nav/hamburger right) — same component
+          the public pages use, so the dashboard chrome matches the site. */}
+      <SiteHeader />
+      <DashboardShell
+        fullName={practitioner.full_name}
       slug={practitioner.slug}
       tier={(practitioner.subscription_tier ?? 'basic').toUpperCase()}
       isPublished={practitioner.is_published}
@@ -131,8 +136,9 @@ export default async function DashboardPage() {
       modalities={modalities}
       taggedModalityIds={taggedModalityIds}
       practitionerDefaults={practitionerDefaults}
-      modalityNameById={modalityNameById}
-      availabilityBlocks={availabilityBlocks}
-    />
+        modalityNameById={modalityNameById}
+        availabilityBlocks={availabilityBlocks}
+      />
+    </>
   )
 }

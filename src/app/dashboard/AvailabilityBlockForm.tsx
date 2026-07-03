@@ -60,14 +60,22 @@ function parseDays(rule: string | null): Set<string> {
 
 export default function AvailabilityBlockForm({
   block,
+  initialDate,
   onDone,
   onCancel,
 }: {
   block: AvailabilityBlockRow | null
+  // Optional pre-fill for CREATE mode only: seeds a one-off dated block on this
+  // date (used by the calendar's empty-day click). Purely additive — validation
+  // and submit are unchanged, and existing callers omit it.
+  initialDate?: string
   onDone: () => void
   onCancel: () => void
 }) {
   const isEdit = Boolean(block)
+
+  // Only seed from initialDate when creating (never override an edited block).
+  const seedDate = block ? null : (initialDate ?? null)
 
   const [format, setFormat] = useState(block?.format ?? 'virtual')
 
@@ -81,13 +89,14 @@ export default function AvailabilityBlockForm({
   const [resolving, setResolving] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Schedule
+  // Schedule. A seeded create (calendar empty-day click) starts as a one-off
+  // dated block on the clicked date (start === end).
   const [scheduleType, setScheduleType] = useState<'recurring' | 'dates'>(
-    block?.startDate ? 'dates' : 'recurring'
+    block?.startDate || seedDate ? 'dates' : 'recurring'
   )
   const [days, setDays] = useState<Set<string>>(parseDays(block?.recurrenceRule ?? null))
-  const [startDate, setStartDate] = useState(block?.startDate ?? '')
-  const [endDate, setEndDate] = useState(block?.endDate ?? '')
+  const [startDate, setStartDate] = useState(block?.startDate ?? seedDate ?? '')
+  const [endDate, setEndDate] = useState(block?.endDate ?? seedDate ?? '')
 
   // Time + timezone
   const [startTime, setStartTime] = useState(toInputTime(block?.startTime ?? null))

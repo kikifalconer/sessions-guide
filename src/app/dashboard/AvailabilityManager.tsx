@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import AvailabilityBlockForm, {
   type AvailabilityBlockRow,
 } from './AvailabilityBlockForm'
+import AvailabilityCalendar from './AvailabilityCalendar'
 import { setBlockActive } from './availabilityActions'
 
 const FORMAT_SUMMARY: Record<string, string> = {
@@ -24,7 +25,10 @@ function scheduleSummary(b: AvailabilityBlockRow): string {
   return parts.join('  ·  ')
 }
 
-type View = { kind: 'list' } | { kind: 'create' } | { kind: 'edit'; id: string }
+type View =
+  | { kind: 'list' }
+  | { kind: 'create'; date?: string }
+  | { kind: 'edit'; id: string }
 
 export default function AvailabilityManager({
   blocks,
@@ -59,6 +63,7 @@ export default function AvailabilityManager({
     return (
       <AvailabilityBlockForm
         block={null}
+        initialDate={view.date}
         onDone={done}
         onCancel={() => setView({ kind: 'list' })}
       />
@@ -159,31 +164,47 @@ export default function AvailabilityManager({
   )
 
   return (
-    <div className="mx-auto mt-10 w-full max-w-[760px]">
-      <div className="flex items-center justify-between">
+    <div className="w-full">
+      <div className="mx-auto mb-8 flex w-full max-w-[1100px] items-center justify-between">
         <p className="label text-dark">YOUR AVAILABILITY</p>
         <button type="button" className="btn-primary" onClick={() => setView({ kind: 'create' })}>
           ADD BLOCK
         </button>
       </div>
 
-      {error && <p className="caption mt-4 text-olive">{error}</p>}
-
-      {blocks.length === 0 ? (
-        <p className="mt-12 text-center text-dark">
-          No availability yet. Add your first block so seekers can book with you.
-        </p>
-      ) : (
-        <div className="mt-8 flex flex-col gap-4">
-          {active.map(row)}
-          {inactive.length > 0 && (
-            <>
-              <p className="label mt-6 text-dark opacity-70">INACTIVE</p>
-              {inactive.map(row)}
-            </>
-          )}
-        </div>
+      {error && (
+        <p className="mx-auto mb-4 w-full max-w-[1100px] caption text-olive">{error}</p>
       )}
+
+      {/* Monthly calendar: click a block to edit it, click an empty day to
+          create a one-off block on that date. */}
+      <AvailabilityCalendar
+        blocks={active}
+        onSelectBlock={(id) => setView({ kind: 'edit', id })}
+        onSelectDay={(date) => setView({ kind: 'create', date })}
+      />
+
+      {/* Secondary management list. The calendar is display-only and never shows
+          inactive blocks, so deactivate/reactivate (existing behavior, not new
+          CRUD) stays reachable here. */}
+      <div className="mx-auto mt-16 w-full max-w-[760px]">
+        <p className="label text-dark">MANAGE BLOCKS</p>
+        {blocks.length === 0 ? (
+          <p className="mt-6 text-dark">
+            No availability yet. Add your first block so seekers can book with you.
+          </p>
+        ) : (
+          <div className="mt-6 flex flex-col gap-4">
+            {active.map(row)}
+            {inactive.length > 0 && (
+              <>
+                <p className="label mt-6 text-dark opacity-70">INACTIVE</p>
+                {inactive.map(row)}
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
