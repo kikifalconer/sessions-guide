@@ -31,6 +31,9 @@ const CALENDAR_UNVERIFIED_ERROR =
   "We couldn't confirm the practitioner's calendar just now. Please try again in a moment."
 const HORIZON_DAYS = 56
 const HOLD_EXPIRY_MINUTES = 30
+// Unpaid pending-approval bookings await human approval, so they get a generous
+// window before being reclaimed (much longer than the 30-min payment hold). M2.
+const STALE_APPROVAL_DAYS = 7
 const CURRENCY = 'usd' // single launch currency for now
 
 export type BookingInput = {
@@ -84,6 +87,21 @@ function getStripe(): Stripe | null {
 // bookings (payment_status = 'offsite') are durable and never expired here.
 export async function expireStaleHolds(practitionerId: string): Promise<void> {
   const admin = createAdminClient()
+
+  // Reclaim stale UNPAID pending-approval holds so a guest cannot indefinitely
+  // occupy a practitioner's calendar with never-approved bookings (M2). These
+  // carry no PaymentIntent (never charged), so no Stripe cleanup is needed.
+  // Offsite bookings are deliberately NOT expired here — decisions.md records
+  // that offsite rows are durable.
+  const approvalCutoff = DateTime.utc().minus({ days: STALE_APPROVAL_DAYS }).toISO()
+  await admin
+    .from('bookings')
+    .update({ status: 'cancelled', cancellation_reason: 'approval_expired' })
+    .eq('practitioner_id', practitionerId)
+    .eq('status', 'pending_approval')
+    .eq('payment_status', 'unpaid')
+    .lt('created_at', approvalCutoff)
+
   const cutoff = DateTime.utc().minus({ minutes: HOLD_EXPIRY_MINUTES }).toISO()
   // Return the rows we actually flipped so we cancel PIs only for real releases.
   const { data: expired } = await admin
