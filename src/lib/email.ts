@@ -1,5 +1,14 @@
 import { Resend } from 'resend'
 
+// Collapse CR/LF and whitespace runs in a user-supplied value to a single line.
+// An interior newline in an email SUBJECT is a malformed header that Resend
+// rejects; for the review-request send that would wedge the cron (it leaves the
+// booking unstamped and retries the same broken send forever). Names never
+// legitimately contain newlines (L8).
+function oneLine(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
 // Booking emails. Wording must match the actual booking state and follow
 // brand-voice.md: calm, specific, no urgency, no exclamation points in
 // chrome, no em dashes. Email failures never fail the booking; callers
@@ -260,7 +269,7 @@ export async function sendReviewRequestEmail(
     await resend.emails.send({
       from,
       to: input.seekerEmail,
-      subject: `How was your session with ${input.practitionerName}`,
+      subject: `How was your session with ${oneLine(input.practitionerName)}`,
       text: reviewRequestBody(input),
     })
     return true

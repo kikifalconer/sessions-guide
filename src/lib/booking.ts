@@ -76,6 +76,11 @@ export function resolveChargeAmount(
   st: SessionTypeBookingFields,
   requestedAmount: number | null
 ): number | null {
+  // Reject NaN/Infinity (e.g. Number('abc')) up front: every comparison below
+  // is false for NaN, so it would otherwise slip through as a NaN amount and
+  // blow up at the Stripe boundary instead of showing "Choose a valid amount" (L1).
+  if (requestedAmount !== null && !Number.isFinite(requestedAmount)) return null
+
   if (st.pricing_model === 'fixed') {
     return st.price && st.price > 0 ? st.price : null
   }

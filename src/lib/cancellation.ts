@@ -264,7 +264,7 @@ export async function cancelBooking(args: {
     // payment_status stays 'offsite'.
   }
 
-  const { error: updateError } = await admin
+  const { data: cancelledRows, error: updateError } = await admin
     .from('bookings')
     .update({
       status: 'cancelled',
@@ -278,8 +278,29 @@ export async function cancelBooking(args: {
     })
     .eq('id', bookingId)
     .neq('status', 'cancelled') // guard against a concurrent cancel
+    .select('id')
   if (updateError) {
     return { ok: false, error: 'Something went wrong. Try again or contact support.' }
+  }
+
+  // A concurrent cancel already flipped this booking. The shared Stripe
+  // idempotency key means no double refund occurred; return the recorded
+  // outcome WITHOUT sending a second set of cancellation emails (L6).
+  if (!cancelledRows || cancelledRows.length === 0) {
+    const fresh = await loadBooking(bookingId)
+    return {
+      ok: true,
+      alreadyCancelled: true,
+      policy,
+      refundAmount: fresh?.amount_refunded ?? 0,
+      isFull: (fresh?.amount_refunded ?? 0) > 0 && fresh?.amount_refunded === fresh?.amount_paid,
+      paymentStatus: (fresh?.payment_status ?? 'unpaid') as 'paid' | 'unpaid' | 'refunded' | 'offsite',
+      offsiteObligation: fresh?.payment_status === 'offsite' && (fresh?.amount_refunded ?? 0) > 0,
+      whenLabel: whenLabel(booking.start_datetime, booking.timezone),
+      locationDisplay: booking.booked_location_display,
+      sessionName: booking.session_name,
+      practitionerName: booking.practitioner_name,
+    }
   }
 
   // Remove the practitioner's calendar event, if one was created. Non-fatal and

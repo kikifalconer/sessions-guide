@@ -61,6 +61,7 @@ async function resolvePractitionerIds(admin: Admin, filter: DiscoveryFilter): Pr
       .from('modalities')
       .select('id')
       .eq('category_id', category.id)
+      .eq('is_approved', true) // unapproved (pending) modalities are not public (L7)
     const modalityIds = (mods ?? []).map((m) => m.id as string)
     if (modalityIds.length === 0) return []
 
@@ -96,6 +97,7 @@ async function hydrateCards(admin: Admin, ids: string[]): Promise<PractitionerCa
     .from('practitioner_modalities')
     .select('practitioner_id, is_primary, modalities ( name, slug )')
     .in('practitioner_id', pubIds)
+    .eq('modalities.is_approved', true) // drop unapproved modalities from cards (L7)
 
   // Ratings: published reviews only, one batched query, aggregated in JS (D14).
   const { data: reviewRows } = await admin
@@ -337,6 +339,7 @@ async function idsByModality(admin: Admin, modalitySlug: string): Promise<string
     .from('modalities')
     .select('id')
     .eq('slug', modalitySlug)
+    .eq('is_approved', true) // an unapproved modality slug resolves to nothing (L7)
     .maybeSingle()
   if (!mod) return []
   const { data: pm } = await admin
