@@ -80,20 +80,44 @@ export async function deleteCalendarEventForBooking(bookingId: string): Promise<
       .eq('practitioner_id', booking.practitioner_id)
       .maybeSingle()
 
+    // Only clear the pointer once the remote event is CONFIRMED gone. If the
+    // grant is revoked (no token) or the delete errors, keep google_event_id so
+    // the event is not orphaned with no way to find it again (M1).
+    let remoteDeleteConfirmed = false
     if (integration) {
       const accessToken = await getValidAccessToken(booking.practitioner_id)
       if (accessToken) {
-        await deleteEvent(
-          accessToken,
-          integration.calendar_id ?? 'primary',
-          booking.google_event_id as string
+        try {
+          // deleteEvent treats 404/410 (already gone) as success.
+          await deleteEvent(
+            accessToken,
+            integration.calendar_id ?? 'primary',
+            booking.google_event_id as string
+          )
+          remoteDeleteConfirmed = true
+        } catch (err) {
+          console.error(
+            'deleteCalendarEventForBooking: remote delete failed, keeping google_event_id',
+            bookingId,
+            err
+          )
+        }
+      } else {
+        console.error(
+          'deleteCalendarEventForBooking: calendar grant unusable, keeping google_event_id',
+          bookingId
         )
       }
+    } else {
+      console.error(
+        'deleteCalendarEventForBooking: no integration, cannot delete remote event; keeping google_event_id',
+        bookingId
+      )
     }
 
-    // Clear the id even if the remote delete could not run, so we never point
-    // at a stale event.
-    await admin.from('bookings').update({ google_event_id: null }).eq('id', bookingId)
+    if (remoteDeleteConfirmed) {
+      await admin.from('bookings').update({ google_event_id: null }).eq('id', bookingId)
+    }
   } catch (err) {
     // Never block a cancellation/refund on calendar failure.
     console.error('deleteCalendarEventForBooking failed', bookingId, err)
