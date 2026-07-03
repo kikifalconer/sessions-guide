@@ -77,7 +77,7 @@ export default function DashboardShell({
 
   return (
     <div className="flex min-h-screen bg-bg">
-      <aside className="w-[240px] shrink-0 border-r border-border bg-surface">
+      <aside className="w-[180px] shrink-0 border-r border-border bg-bg">
         <nav className="flex flex-col py-4">
           {SECTIONS.map((section) => {
             const isActive = active === section
@@ -86,9 +86,9 @@ export default function DashboardShell({
                 key={section}
                 type="button"
                 onClick={() => setActive(section)}
-                className={`px-6 py-3 text-left ${
+                className={`px-5 py-3 text-left ${
                   isActive
-                    ? 'border-l-2 border-olive bg-bg'
+                    ? 'border-l-2 border-olive bg-surface'
                     : 'border-l-2 border-transparent'
                 }`}
               >
