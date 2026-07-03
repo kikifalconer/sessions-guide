@@ -60,12 +60,15 @@ export async function submitInquiry(input: {
     }
   }
 
+  // Store and email the SAME truncated message so the practitioner's inbox and
+  // their dashboard never disagree for >4000-char inquiries (L5).
+  const storedMessage = message.slice(0, 4000)
   const { error } = await admin.from('inquiries').insert({
     practitioner_id: practitioner.id,
     session_type_id: sessionTypeId,
     seeker_name: name,
     seeker_email: email,
-    message: message.slice(0, 4000),
+    message: storedMessage,
   })
   if (error) {
     return { ok: false, error: 'Something went wrong. Try again or contact support.' }
@@ -75,7 +78,7 @@ export async function submitInquiry(input: {
     practitionerEmail: await practitionerEmail(practitioner.id),
     seekerName: name,
     seekerEmail: email,
-    message,
+    message: storedMessage,
     sessionName,
   })
 

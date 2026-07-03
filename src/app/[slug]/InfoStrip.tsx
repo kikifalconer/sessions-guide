@@ -38,8 +38,8 @@ export default function InfoStrip({
 
         <div className="min-w-0 overflow-hidden">
           <h5 className="mb-2 truncate text-[0.6rem] text-dark sm:mb-3 sm:text-[0.8rem]">LINKS</h5>
-          {links.map((link) => (
-            <p key={link.label} className="truncate text-[0.7rem] sm:text-[0.95rem]">
+          {links.map((link, i) => (
+            <p key={`${link.href}-${i}`} className="truncate text-[0.7rem] sm:text-[0.95rem]">
               <a
                 href={link.href}
                 target="_blank"

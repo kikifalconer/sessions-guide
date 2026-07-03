@@ -11,8 +11,11 @@ import { sendReportNotice } from '@/lib/email'
 // never leaks a review's existence/state to the reporter.
 export type ReportResult = { ok: boolean }
 
-export async function reportReview(reviewId: string, reason: string): Promise<ReportResult> {
+export async function reportReview(reviewId: unknown, reason: unknown): Promise<ReportResult> {
   if (!reviewId || typeof reviewId !== 'string') return { ok: true }
+  // A crafted call could pass a non-string reason; coerce rather than throw on
+  // reason.trim() (which would surface as a 500) (L3).
+  const cleanReason = typeof reason === 'string' ? reason.trim() : ''
 
   const admin = createAdminClient()
 
@@ -35,14 +38,14 @@ export async function reportReview(reviewId: string, reason: string): Promise<Re
   // Always append the report row (multiple reports = stronger triage signal).
   await admin.from('review_reports').insert({
     review_id: reviewId,
-    reason: reason.trim().slice(0, 2000) || null,
+    reason: cleanReason.slice(0, 2000) || null,
   })
 
   if (isFirstReport) {
     await sendReportNotice({
       reviewId,
       practitionerId: review.practitioner_id as string,
-      reason: reason.trim() || null,
+      reason: cleanReason || null,
     })
   }
 
