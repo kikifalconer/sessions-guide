@@ -23,12 +23,20 @@ export type BookedWindow = {
   end_datetime: string
 }
 
+export type SlotOffering = {
+  format: 'virtual' | 'in_person'
+  blockId: string
+}
+
 export type Slot = {
   startUtc: string
   endUtc: string
-  blockId: string
-  blockFormat: 'virtual' | 'in_person' | 'both'
   timezone: string
+  // Every concrete format bookable at this instant, each backed by the block
+  // that offers it. When two blocks overlap (e.g. a virtual-only block and an
+  // in-person-only block at the same time), BOTH surface here rather than the
+  // last-read block silently winning (M3).
+  offerings: SlotOffering[]
 }
 
 // luxon weekday numbers: Monday = 1 ... Sunday = 7
@@ -86,8 +94,8 @@ export function generateSlots(
     )
   )
 
-  const slots: Slot[] = []
-  const seenStarts = new Set<string>()
+  // Keyed by startUtc so overlapping blocks merge their offerings at one time.
+  const slotMap = new Map<string, Slot>()
 
   for (const block of blocks) {
     const weekdays = parseRecurrenceRule(block.recurrence_rule)
@@ -129,20 +137,27 @@ export function generateSlots(
 
         const startUtc = slotStart.toUTC().toISO()
         const endUtc = slotEnd.toUTC().toISO()
-        if (!startUtc || !endUtc || seenStarts.has(startUtc)) continue
-        seenStarts.add(startUtc)
+        if (!startUtc || !endUtc) continue
 
-        slots.push({
-          startUtc,
-          endUtc,
-          blockId: block.id,
-          blockFormat: block.format,
-          timezone: zone,
-        })
+        // Concrete formats this block offers at the instant. 'both' contributes
+        // both; a single-format block contributes just its own.
+        const formats: ('virtual' | 'in_person')[] =
+          block.format === 'both' ? ['virtual', 'in_person'] : [block.format]
+
+        let slot = slotMap.get(startUtc)
+        if (!slot) {
+          slot = { startUtc, endUtc, timezone: zone, offerings: [] }
+          slotMap.set(startUtc, slot)
+        }
+        for (const format of formats) {
+          // First block to offer a given format at this time backs it.
+          if (!slot.offerings.some((o) => o.format === format)) {
+            slot.offerings.push({ format, blockId: block.id })
+          }
+        }
       }
     }
   }
 
-  slots.sort((a, b) => a.startUtc.localeCompare(b.startUtc))
-  return slots
+  return [...slotMap.values()].sort((a, b) => a.startUtc.localeCompare(b.startUtc))
 }

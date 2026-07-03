@@ -91,20 +91,21 @@ export default function BookingFlow(props: Props) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   // Which formats does the chosen slot actually offer for this session type?
+  const slotFormats = (s: Slot): ('virtual' | 'in_person')[] => {
+    const all = Array.from(new Set(s.offerings.map((o) => o.format)))
+    return sessionType.format === 'both' ? all : all.filter((f) => f === sessionType.format)
+  }
+
   const formatOptions = useMemo((): ('virtual' | 'in_person')[] => {
     if (!slot) return []
-    const fromBlock: ('virtual' | 'in_person')[] =
-      slot.blockFormat === 'both' ? ['virtual', 'in_person'] : [slot.blockFormat]
-    if (sessionType.format === 'both') return fromBlock
-    return fromBlock.filter((f) => f === sessionType.format)
+    return slotFormats(slot)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slot, sessionType.format])
 
   const chooseSlot = (s: Slot) => {
     setSlot(s)
     setError(null)
-    const fromBlock: ('virtual' | 'in_person')[] =
-      s.blockFormat === 'both' ? ['virtual', 'in_person'] : [s.blockFormat]
-    const options = sessionType.format === 'both' ? fromBlock : fromBlock.filter((f) => f === sessionType.format)
+    const options = slotFormats(s)
     if (options.length === 1) {
       setBookedFormat(options[0])
       setStep('details')
@@ -116,10 +117,14 @@ export default function BookingFlow(props: Props) {
 
   const bookingInput = (): BookingInput | null => {
     if (!slot || !bookedFormat) return null
+    // Resolve the block that backs the chosen format (offerings may span two
+    // overlapping blocks — M3).
+    const blockId = slot.offerings.find((o) => o.format === bookedFormat)?.blockId
+    if (!blockId) return null
     return {
       practitionerId: practitioner.id,
       sessionTypeId: sessionType.id,
-      blockId: slot.blockId,
+      blockId,
       startUtc: slot.startUtc,
       bookedFormat,
       name,
@@ -157,7 +162,12 @@ export default function BookingFlow(props: Props) {
   const slotLabel = slot
     ? DateTime.fromISO(slot.startUtc).toLocal().toFormat("cccc, LLLL d, h:mm a") + ` (${localZone})`
     : ''
-  const city = slot ? blockCities[slot.blockId] : null
+  // City for the block backing the chosen format (falls back to the first
+  // offering before a format is chosen).
+  const cityBlockId = slot
+    ? slot.offerings.find((o) => o.format === bookedFormat)?.blockId ?? slot.offerings[0]?.blockId
+    : null
+  const city = cityBlockId ? blockCities[cityBlockId] : null
 
   const amountRequired =
     props.chargingNow &&
