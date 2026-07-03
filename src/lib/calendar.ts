@@ -137,6 +137,10 @@ export async function getValidAccessToken(practitionerId: string): Promise<strin
     if (!token) throw new Error('no access token')
 
     // Persist a refreshed token/expiry if google-auth-library rotated it.
+    // Compare-and-set on the previously-read access_token (M9): if a concurrent
+    // caller already refreshed and wrote, this matches 0 rows and we skip the
+    // write, so the DB never ends up with one writer's token and another's
+    // expiry. Our just-obtained token is still valid and returned regardless.
     const creds = client.credentials
     if (creds.access_token && creds.access_token !== row.access_token) {
       await admin
@@ -149,6 +153,7 @@ export async function getValidAccessToken(practitionerId: string): Promise<strin
           updated_at: DateTime.utc().toISO(),
         })
         .eq('practitioner_id', practitionerId)
+        .eq('access_token', row.access_token)
     }
     return token
   } catch {
