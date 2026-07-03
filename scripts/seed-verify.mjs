@@ -3,7 +3,9 @@
 // ids) for teardown. Reuses Kiki (kiki-falconer-2) additively.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
+import { assertSeedAllowed } from './seed-guard.mjs'
 const env={};for(const l of readFileSync('.env.local','utf8').split('\n')){const m=l.match(/^([A-Za-z0-9_]+)=(.*)$/);if(m)env[m[1]]=m[2].replace(/^["']|["']$/g,'')}
+assertSeedAllowed(env.NEXT_PUBLIC_SUPABASE_URL)
 const sb=createClient(env.NEXT_PUBLIC_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY)
 const MANIFEST='scripts/verify-seed-manifest.json'
 const man={ authUsers:[], practitioners:[], sessionTypes:[], bookings:[], reviews:[] }

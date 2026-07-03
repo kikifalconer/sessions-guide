@@ -4,7 +4,9 @@
 // session_types) -> auth.users (NOT reached by cascade — deleted explicitly).
 import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
+import { assertSeedAllowed } from './seed-guard.mjs'
 const env={};for(const l of readFileSync('.env.local','utf8').split('\n')){const m=l.match(/^([A-Za-z0-9_]+)=(.*)$/);if(m)env[m[1]]=m[2].replace(/^["']|["']$/g,'')}
+assertSeedAllowed(env.NEXT_PUBLIC_SUPABASE_URL)
 const sb=createClient(env.NEXT_PUBLIC_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY)
 const man=JSON.parse(readFileSync('scripts/verify-seed-manifest.json'))
 const r1=await sb.from('reviews').delete().in('id', man.reviews); console.log('reviews deleted:', r1.error?r1.error.message:'OK', '('+man.reviews.length+')')
