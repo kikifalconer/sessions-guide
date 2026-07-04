@@ -78,6 +78,8 @@ Offsite payment sessions (practitioner collects payment themselves) require name
 
 **Implications:** `bookings` table supports `seeker_id = null`. Guest bookers are captured as client records for the practitioner. Seekers can optionally claim a guest booking to their account post-session. Booking UI conditionally renders the billing fields based on the session type's `payment_method` and `pricing_model`.
 
+SUPERSEDED July 2026 — see D20.
+
 ---
 
 ## Modality Taxonomy — Two-Layer (June 2026)
@@ -411,3 +413,68 @@ Fix: requires making the dashboard tabs URL-driven (today they are client-side `
 ## Phase 5 Finishing-Line Re-Verified Against a Fresh Roster (accuracy note, June 2026)
 
 The Phase 5 finishing-line behaviors (published gate, multi-practitioner category/city/search narrowing, radius include/exclude, virtual-everywhere + in-person-only toggle, psychedelic disclaimer, rating aggregation + featured-first reviews, report-hook write) were re-verified live this session against a freshly RE-SEEDED multi-practitioner roster (6 practitioners incl. virtual-only Dia, psychedelic-facilitation Eli, out-of-radius Cal, and an unpublished control). This matters for the phase-transition record because the prior "VERIFIED LIVE" claims in `current-phase.md` rested on a roster that had ALREADY been torn down — at the start of this session the live DB held only one published practitioner (Kiki, no reviews) plus one unpublished test account, so those claims were not reproducible until re-seeded. Roster re-seeded via `scripts/seed-verify.mjs` (manifest rewritten for teardown); behaviors confirmed; D19/TD7 added from this session's param fix.
+
+---
+
+## D20 — Seeker Accounts Required, supersedes Guest Booking (July 2026)
+
+**Decision:** All seekers must hold an account. Account creation happens
+in-flow at first booking or first discussion post, never as a wall before
+browsing. Auth is magic link (Supabase OTP), no password.
+
+**Supersedes:** Guest Booking (June 2026). Guest booking is retired for new
+bookings.
+
+**Rationale:** Verified identity on all reviews and discussion posts; stable
+`reviewer_id`/`seeker_id` on every new row; on-screen self-cancel and review
+writing, clearing the D1/D8 email-only dependency; email capture.
+
+**Implications:** New bookings always carry `seeker_id`. `guest_name` and
+`guest_email` are retained for historical rows only. New `seekers` profile
+table. `clients` guest-matching logic deprecated for new records. Seeker
+dashboard becomes launch-blocking scope. Practitioner dashboard gains a
+seeker-side tab (bookings where the practitioner is the seeker, reviews they
+have written), viable because `practitioners.id = auth.users.id`.
+
+**Note on reviews:** Reviews were never anonymous (booking-reference gated).
+This adds stable authenticated identity and an on-screen path; it does not
+fix an anonymity problem.
+
+---
+
+## D21 — Newsletter Consent, express opt-in only (July 2026)
+
+**Decision:** `newsletter_opt_in boolean not null default false` on the
+seeker profile. One unchecked checkbox at signup. Consent is never inferred
+from account creation.
+
+**Rationale:** CASL (Canada) and the Spam Act (Australia) require express
+consent for marketing email. Transactional email is unaffected.
+
+**Implications:** Add newsletter consent to the E2/E5 counsel scope.
+
+---
+
+## D22 — Discussion Boards, seeker posting enabled (July 2026)
+
+**Decision:** Category-page discussion boards, publicly readable.
+Authenticated practitioners AND seekers may post. City boards deferred with
+TD4 (no cities table to anchor threads).
+
+**Implications:** `is_published` gate plus append-only report hook on all
+posts, mirroring the review-report pattern. Rate limiting on public actions
+escalates from deferred to a pre-boards gate. Boards depend on seeker auth
+(D20) shipping first.
+
+**Counsel scope:** UGC hosting, including Journeys-category discussion,
+added to E1/E2.
+
+---
+
+## D23 — Seeker Payment Methods, deferred (July 2026)
+
+**Decision:** No saved cards at launch. Stripe Elements per-booking entry
+stands. Revisit as v2 via Stripe Customer + SetupIntent.
+
+**Rationale:** Saved cards add PCI-scoped UI and Stripe Customer plumbing
+for low launch value.
