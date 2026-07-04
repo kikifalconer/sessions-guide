@@ -17,23 +17,18 @@ const PSYCHEDELIC_DISCLAIMER =
 const FIELD =
   'w-full border border-border bg-surface px-3 py-2 font-ui text-[0.8rem] uppercase tracking-[0.04em] text-dark outline-none focus:border-olive sm:w-auto'
 
-const FORMATS: SearchFormat[] = ['any', 'in_person', 'virtual']
-const FORMAT_LABEL: Record<SearchFormat, string> = {
-  any: 'ANY FORMAT',
-  in_person: 'IN PERSON',
-  virtual: 'VIRTUAL',
-}
-
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ modality?: string; format?: string; city?: string }>
+  searchParams: Promise<{ modality?: string; in_person?: string; city?: string }>
 }) {
   const sp = await searchParams
   const modalitySlug = sp.modality || undefined
   const citySlug = sp.city || undefined
-  const format: SearchFormat =
-    sp.format === 'in_person' || sp.format === 'virtual' ? sp.format : 'any'
+  // In-person-only is the boolean ?in_person=1, identical to the city page.
+  // Mapped to the discovery format enum so discovery.ts stays unchanged.
+  const inPersonOnly = sp.in_person === '1'
+  const format: SearchFormat = inPersonOnly ? 'in_person' : 'any'
 
   const [cards, modalityGroups, cities] = await Promise.all([
     discoverSearch({ modalitySlug, format, citySlug }),
@@ -42,7 +37,7 @@ export default async function SearchPage({
   ])
 
   const hasPsychedelic = cards.some((p) => p.hasPsychedelic)
-  const hasFilters = Boolean(modalitySlug || citySlug || format !== 'any')
+  const hasFilters = Boolean(modalitySlug || citySlug || inPersonOnly)
 
   return (
     <main className="min-h-screen bg-bg">
@@ -82,15 +77,15 @@ export default async function SearchPage({
             </select>
           </label>
 
-          <label className="flex flex-col gap-1">
-            <span className="label text-dark">FORMAT</span>
-            <select name="format" defaultValue={format} className={FIELD}>
-              {FORMATS.map((f) => (
-                <option key={f} value={f}>
-                  {FORMAT_LABEL[f]}
-                </option>
-              ))}
-            </select>
+          <label className="flex items-center gap-2 sm:pb-2">
+            <input
+              type="checkbox"
+              name="in_person"
+              value="1"
+              defaultChecked={inPersonOnly}
+              className="h-4 w-4 accent-olive"
+            />
+            <span className="label text-dark">IN PERSON ONLY</span>
           </label>
 
           <label className="flex flex-col gap-1">
