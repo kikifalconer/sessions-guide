@@ -18,6 +18,14 @@ const RESERVED_SLUGS = new Set([
   'city',
   'about',
   'sages',
+  // Marketing + legal routes.
+  'mission',
+  'join-sessions',
+  'pricing',
+  'help',
+  'contact',
+  'privacy',
+  'terms',
 ])
 
 export function slugify(name: string): string {
