@@ -16,6 +16,10 @@ Running log of decisions made. Consult before generating code that touches these
 
 **TD9 — Resend sandbox sender blocks ALL transactional email delivery.** `RESEND_FROM_EMAIL = onboarding@resend.dev` (Resend test sender) delivers only to the account owner, so NO seeker-facing mail — booking, payment, cancellation/refund, review request, inquiry, report notice — reaches real recipients; observed live as a 403. **HARD pre-launch gate:** verify a domain and set `RESEND_FROM_EMAIL` to it before any public/seeker traffic. Full detail in the TD9 section below.
 
+**Seeker accounts + seeker dashboard (D20).** Launch-blocking scope. No booking can be taken without seeker auth once guest booking retires.
+
+**Rate limiting on public actions (D22).** Pre-boards gate. Must land before or with discussion boards.
+
 ---
 
 ## Location Architecture — Path A (June 2026)
