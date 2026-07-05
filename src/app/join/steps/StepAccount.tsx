@@ -54,7 +54,9 @@ export default function StepAccount({
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/join`,
+        // source=join is the explicit origin marker (Amendment 2): only this
+        // flow may create a practitioners row in the callback.
+        redirectTo: `${window.location.origin}/auth/callback?next=/join&source=join`,
       },
     })
     if (oauthError) {

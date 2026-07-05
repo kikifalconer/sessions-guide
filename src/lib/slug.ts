@@ -18,6 +18,9 @@ const RESERVED_SLUGS = new Set([
   'city',
   'about',
   'sages',
+  // Seeker accounts (Phase 7 / D20).
+  'login',
+  'account',
   // Marketing + legal routes.
   'mission',
   'join-sessions',

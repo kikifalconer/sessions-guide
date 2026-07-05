@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { resolveAuthDestination } from '@/lib/authDestination'
 import HeaderNav, { type NavLink } from './header-nav'
 
 // Shared site header.
@@ -26,11 +27,19 @@ export default async function SiteHeader({ centerLabel }: { centerLabel?: string
     data: { user },
   } = await supabase.auth.getUser()
 
-  // An account implies a practitioner (seekers book as guests), so a session
-  // means DASHBOARD; otherwise LOG IN. No practitioners query needed.
-  const authSlot = user
-    ? { label: 'DASHBOARD', href: '/dashboard' }
-    : { label: 'LOG IN', href: '/join' }
+  // D20: seekers hold accounts too, so a session no longer implies a
+  // practitioner. Route by account shape via the shared helper (same check as
+  // post-login routing): practitioners row → DASHBOARD, else ACCOUNT.
+  let authSlot: { label: string; href: string }
+  if (user) {
+    const destination = await resolveAuthDestination(user.id)
+    authSlot =
+      destination === '/dashboard'
+        ? { label: 'DASHBOARD', href: '/dashboard' }
+        : { label: 'ACCOUNT', href: '/account' }
+  } else {
+    authSlot = { label: 'LOG IN', href: '/login' }
+  }
 
   const links = LINKS.filter((l) => l.live)
 
