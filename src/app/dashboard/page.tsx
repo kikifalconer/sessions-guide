@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadIntegration } from '@/lib/calendar'
+import { loadSeekerData } from '@/lib/seekerData'
 import SiteHeader from '@/components/site-header'
 import DashboardShell from './DashboardShell'
 
@@ -29,7 +30,12 @@ export default async function DashboardPage() {
   if (!practitioner) redirect('/join')
 
   // Google Calendar connection state for the SETTINGS panel (service-role read).
-  const integration = await loadIntegration(user.id)
+  // Seeker-side data for the MY SESSIONS tab (D20): bookings where this
+  // practitioner is the seeker, reviews they wrote. Same loader as /account.
+  const [integration, seekerData] = await Promise.all([
+    loadIntegration(user.id),
+    loadSeekerData(user.id),
+  ])
 
   // SESSIONS + AVAILABILITY tab data (service-role reads, scoped to this practitioner).
   const [{ data: stRows }, { data: tagRows }, { data: modalityRows }, { data: blockRows }] =
@@ -138,6 +144,7 @@ export default async function DashboardPage() {
       practitionerDefaults={practitionerDefaults}
         modalityNameById={modalityNameById}
         availabilityBlocks={availabilityBlocks}
+        seekerData={seekerData}
       />
     </>
   )

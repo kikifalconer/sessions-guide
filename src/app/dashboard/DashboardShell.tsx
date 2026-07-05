@@ -5,12 +5,15 @@ import ProfileSection from './ProfileSection'
 import CalendarSettings from './CalendarSettings'
 import SessionsManager from './SessionsManager'
 import AvailabilityManager from './AvailabilityManager'
+import SeekerBookings from '@/components/account/SeekerBookings'
+import SeekerReviews from '@/components/account/SeekerReviews'
 import type {
   ModalityOption,
   PractitionerDefaults,
   SessionTypeRow,
 } from './SessionTypeForm'
 import type { AvailabilityBlockRow } from './AvailabilityBlockForm'
+import type { SeekerData } from '@/lib/seekerData'
 
 const SECTIONS = [
   'PROFILE',
@@ -19,6 +22,9 @@ const SECTIONS = [
   'CLIENTS',
   'REVIEWS',
   'SETTINGS',
+  // The practitioner's own seeker side (D20): bookings where they are the
+  // seeker and reviews they have written. Same components as /account.
+  'MY SESSIONS',
 ] as const
 
 type Section = (typeof SECTIONS)[number]
@@ -38,8 +44,12 @@ const HELPER_COPY: Record<Section, string> = {
     'Reviews from the seekers you have worked with will appear here as they come in. This space is still being built.',
   SETTINGS:
     'Connect your Google Calendar so booked sessions sync automatically and your outside commitments block off time. You can disconnect whenever you need to.',
+  'MY SESSIONS':
+    'Your own side of the table. Sessions you have booked with other practitioners, and the reviews you have written.',
 }
 
+// Sentence case for the page h1 ('Profile', 'My sessions'). Lowercasing the
+// whole tail keeps two-word labels consistent with the single-word ones.
 function titleCase(section: Section): string {
   return section.charAt(0) + section.slice(1).toLowerCase()
 }
@@ -58,6 +68,7 @@ export default function DashboardShell({
   practitionerDefaults,
   modalityNameById,
   availabilityBlocks,
+  seekerData,
 }: {
   fullName: string
   slug: string
@@ -72,6 +83,7 @@ export default function DashboardShell({
   practitionerDefaults: PractitionerDefaults
   modalityNameById: Record<string, string>
   availabilityBlocks: AvailabilityBlockRow[]
+  seekerData: SeekerData
 }) {
   const [active, setActive] = useState<Section>('PROFILE')
 
@@ -147,6 +159,19 @@ export default function DashboardShell({
                   calendarId={calendarId}
                   syncEnabled={calendarSyncEnabled}
                 />
+              )}
+
+              {active === 'MY SESSIONS' && (
+                <div className="flex flex-col gap-12">
+                  <SeekerBookings
+                    upcoming={seekerData.upcoming}
+                    past={seekerData.past}
+                  />
+                  <SeekerReviews
+                    prompts={seekerData.prompts}
+                    reviews={seekerData.reviews}
+                  />
+                </div>
               )}
             </div>
           </div>
