@@ -2,6 +2,7 @@
 
 import { DateTime } from 'luxon'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
 
 // Guest review submission. The opaque seeker_token (owned by 0004, shared with
 // the cancel flow) IS the authorization: it resolves to exactly one booking,
@@ -33,7 +34,7 @@ export async function submitReview(input: {
   const admin = createAdminClient()
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, practitioner_id, seeker_id, guest_name, status')
+    .select('id, practitioner_id, seeker_id, guest_name, guest_email, status')
     .eq('seeker_token', token)
     .maybeSingle()
 
@@ -54,13 +55,19 @@ export async function submitReview(input: {
     return { ok: false, error: 'You have already reviewed this session.', alreadyReviewed: true }
   }
 
-  const reviewerName = (booking.guest_name as string | null)?.trim() || 'A seeker'
+  // Account-backed rows resolve to the seeker's account name; historical
+  // guest rows keep the guest_name fallback (Amendment 3).
+  const identity = await resolveSeekerIdentity({
+    seeker_id: (booking.seeker_id as string | null) ?? null,
+    guest_name: (booking.guest_name as string | null) ?? null,
+    guest_email: (booking.guest_email as string | null) ?? null,
+  })
 
   const { error } = await admin.from('reviews').insert({
     booking_id: booking.id,
     practitioner_id: booking.practitioner_id,
-    reviewer_id: booking.seeker_id, // null for guests
-    reviewer_name: reviewerName,
+    reviewer_id: booking.seeker_id, // null only on historical guest rows
+    reviewer_name: identity.name,
     rating,
     body,
     is_published: true, // D8 auto-publish

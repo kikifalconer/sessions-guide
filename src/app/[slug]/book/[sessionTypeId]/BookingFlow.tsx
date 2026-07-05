@@ -6,6 +6,7 @@ import { DateTime } from 'luxon'
 import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js'
 import { Elements, PaymentElement, AddressElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import type { Slot } from '@/lib/availability'
+import MagicLinkForm from '@/components/magic-link-form'
 import {
   createBooking,
   createBookingHold,
@@ -17,6 +18,12 @@ import {
 
 // Multi-step seeker booking flow. Low-anxiety by design: no countdowns, no
 // urgency copy, no exclamation points. City-only location until confirmation.
+//
+// D20: booking requires a seeker account. An unauthenticated seeker gets the
+// magic-link step in-flow after choosing a time; the selection survives the
+// auth round-trip as ?slot=&format= on this route (validated server-side as a
+// hint, never trusted). Identity comes from the account — no name/email
+// fields.
 
 type SessionTypeView = {
   id: string
@@ -36,6 +43,12 @@ type Props = {
   sessionType: SessionTypeView
   slots: Slot[]
   blockCities: Record<string, string | null>
+  // null = not signed in; the flow interposes the magic-link step.
+  seeker: { name: string; email: string | null } | null
+  // Selection restored from the URL after the auth round-trip (already
+  // validated against generated slots by the server page; re-matched here).
+  initialSlotStartUtc: string | null
+  initialFormat: 'virtual' | 'in_person' | null
   chargingNow: boolean
   paymentMethod: 'stripe' | 'offsite'
   connectReady: boolean
@@ -47,7 +60,7 @@ type Props = {
   disclaimer: string | null
 }
 
-type Step = 'time' | 'format' | 'details' | 'payment' | 'done'
+type Step = 'time' | 'format' | 'signin' | 'details' | 'payment' | 'done'
 
 const fieldClass =
   'w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive'
@@ -63,11 +76,34 @@ function priceLabel(st: SessionTypeView): string | null {
 export default function BookingFlow(props: Props) {
   const { practitioner, sessionType, slots, blockCities } = props
 
-  const [step, setStep] = useState<Step>('time')
-  const [slot, setSlot] = useState<Slot | null>(null)
-  const [bookedFormat, setBookedFormat] = useState<'virtual' | 'in_person' | null>(null)
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  // Which formats does the chosen slot actually offer for this session type?
+  const slotFormats = (s: Slot): ('virtual' | 'in_person')[] => {
+    const all = Array.from(new Set(s.offerings.map((o) => o.format)))
+    return sessionType.format === 'both' ? all : all.filter((f) => f === sessionType.format)
+  }
+
+  // Restore the selection carried through the auth round-trip. The URL values
+  // are hints: the slot must still exist in today's generated set and the
+  // format must be one the slot offers, or the seeker just picks again.
+  const initialSlot = props.initialSlotStartUtc
+    ? slots.find((s) => s.startUtc === props.initialSlotStartUtc) ?? null
+    : null
+  const initialOptions = initialSlot ? slotFormats(initialSlot) : []
+  const initialFormat = initialSlot
+    ? props.initialFormat && initialOptions.includes(props.initialFormat)
+      ? props.initialFormat
+      : initialOptions.length === 1
+        ? initialOptions[0]
+        : null
+    : null
+
+  const [step, setStep] = useState<Step>(() => {
+    if (!initialSlot) return 'time'
+    if (!initialFormat) return 'format'
+    return props.seeker ? 'details' : 'signin'
+  })
+  const [slot, setSlot] = useState<Slot | null>(initialSlot)
+  const [bookedFormat, setBookedFormat] = useState<'virtual' | 'in_person' | null>(initialFormat)
   const [notes, setNotes] = useState('')
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -90,17 +126,15 @@ export default function BookingFlow(props: Props) {
   }, [slots])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
-  // Which formats does the chosen slot actually offer for this session type?
-  const slotFormats = (s: Slot): ('virtual' | 'in_person')[] => {
-    const all = Array.from(new Set(s.offerings.map((o) => o.format)))
-    return sessionType.format === 'both' ? all : all.filter((f) => f === sessionType.format)
-  }
-
   const formatOptions = useMemo((): ('virtual' | 'in_person')[] => {
     if (!slot) return []
     return slotFormats(slot)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slot, sessionType.format])
+
+  // After time + format are set: signed-in seekers go to details, everyone
+  // else gets the in-flow sign-in step (D20).
+  const stepAfterFormat = (): Step => (props.seeker ? 'details' : 'signin')
 
   const chooseSlot = (s: Slot) => {
     setSlot(s)
@@ -108,7 +142,7 @@ export default function BookingFlow(props: Props) {
     const options = slotFormats(s)
     if (options.length === 1) {
       setBookedFormat(options[0])
-      setStep('details')
+      setStep(stepAfterFormat())
     } else {
       setBookedFormat(null)
       setStep('format')
@@ -127,12 +161,16 @@ export default function BookingFlow(props: Props) {
       blockId,
       startUtc: slot.startUtc,
       bookedFormat,
-      name,
-      email,
       notes,
       requestedAmount: amount ? Number(amount) : null,
     }
   }
+
+  // The selection survives the magic-link round-trip in the URL.
+  const returnTo =
+    slot && bookedFormat
+      ? `/${practitioner.slug}/book/${sessionType.id}?slot=${encodeURIComponent(slot.startUtc)}&format=${bookedFormat}`
+      : `/${practitioner.slug}/book/${sessionType.id}`
 
   const submitDetails = () => {
     const input = bookingInput()
@@ -257,7 +295,7 @@ export default function BookingFlow(props: Props) {
                 className="btn-secondary text-left"
                 onClick={() => {
                   setBookedFormat('virtual')
-                  setStep('details')
+                  setStep(stepAfterFormat())
                 }}
               >
                 VIRTUAL
@@ -269,7 +307,7 @@ export default function BookingFlow(props: Props) {
                 className="btn-secondary text-left"
                 onClick={() => {
                   setBookedFormat('in_person')
-                  setStep('details')
+                  setStep(stepAfterFormat())
                 }}
               >
                 IN PERSON{city ? ` IN ${city.toUpperCase()}` : ''}
@@ -282,7 +320,34 @@ export default function BookingFlow(props: Props) {
         </section>
       )}
 
-      {step === 'details' && slot && bookedFormat && (
+      {step === 'signin' && slot && bookedFormat && (
+        <section>
+          {/* PLACEHOLDER COPY — Kiki to review. */}
+          <h5 className="mb-4 text-dark">SIGN IN TO BOOK</h5>
+          <p className="mb-1">{slotLabel}</p>
+          <p className="mb-6">
+            {bookedFormat === 'virtual' ? 'Virtual' : `In person${city ? ` in ${city}` : ''}`}
+          </p>
+          <p className="mb-6">
+            Booking uses your sessions.guide account. Enter your email and we
+            will send you a sign in link. Your selected time is kept for when
+            you return.
+          </p>
+          <MagicLinkForm
+            next={returnTo}
+            sentNote="The link brings you back here with your time still selected."
+          />
+          <button
+            type="button"
+            className="caption mt-8 text-olive"
+            onClick={() => setStep(formatOptions.length > 1 ? 'format' : 'time')}
+          >
+            BACK
+          </button>
+        </section>
+      )}
+
+      {step === 'details' && slot && bookedFormat && props.seeker && (
         <section>
           <h5 className="mb-4 text-dark">YOUR DETAILS</h5>
           <p className="mb-1">{slotLabel}</p>
@@ -298,30 +363,11 @@ export default function BookingFlow(props: Props) {
             className="flex flex-col gap-5"
           >
             <div>
-              <label htmlFor="seeker_name" className="label mb-2 block text-dark">
-                NAME
-              </label>
-              <input
-                id="seeker_name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={fieldClass}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="seeker_email" className="label mb-2 block text-dark">
-                EMAIL
-              </label>
-              <input
-                id="seeker_email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={fieldClass}
-                required
-              />
+              <p className="label mb-2 text-dark">BOOKING AS</p>
+              <p>
+                {props.seeker.name}
+                {props.seeker.email ? ` (${props.seeker.email})` : ''}
+              </p>
             </div>
 
             {amountRequired && (

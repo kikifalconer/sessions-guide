@@ -19,6 +19,7 @@ import {
   type SessionTypeBookingFields,
 } from '@/lib/booking'
 import { sendBookingEmails } from '@/lib/email'
+import { accountIdentity, resolveSeekerIdentity, type SeekerIdentity } from '@/lib/seekerIdentity'
 import { cancelUrl } from '@/lib/siteUrl'
 import { createCalendarEventForBooking } from '@/lib/calendarSync'
 import { fetchCalendarBusyWindows, liveFreeBusyForWindow } from '@/lib/calendar'
@@ -26,6 +27,7 @@ import { cancelHeldPaymentIntent } from '@/lib/paymentIntents'
 import { Interval } from 'luxon'
 
 const GENERIC_ERROR = 'Something went wrong. Try again or contact support.'
+const SIGN_IN_ERROR = 'Sign in to book a session.'
 const SLOT_TAKEN_ERROR = 'That time was just taken. Choose another time.'
 const CALENDAR_UNVERIFIED_ERROR =
   "We couldn't confirm the practitioner's calendar just now. Please try again in a moment."
@@ -36,14 +38,15 @@ const HOLD_EXPIRY_MINUTES = 30
 const STALE_APPROVAL_DAYS = 7
 const CURRENCY = 'usd' // single launch currency for now
 
+// D20: identity is never client-supplied. The authenticated seeker account is
+// the only identity source; the flow interposes sign-in before this point and
+// the server actions below reject unauthenticated calls regardless.
 export type BookingInput = {
   practitionerId: string
   sessionTypeId: string
   blockId: string
   startUtc: string
   bookedFormat: 'virtual' | 'in_person'
-  name: string
-  email: string
   notes: string
   requestedAmount: number | null // sliding_scale / donation, dollars
 }
@@ -286,17 +289,13 @@ function isExclusionViolation(error: { code?: string } | null): boolean {
 
 async function insertBooking(
   input: BookingInput,
+  seekerId: string,
   block: AvailabilityBlockRow,
   sessionType: SessionTypeRow,
   resolvedMode: string,
   status: string,
   paymentStatus: string | null
 ): Promise<{ id: string; seekerToken: string } | { error: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   const endUtc = DateTime.fromISO(input.startUtc)
     .plus({ minutes: sessionType.duration_minutes })
     .toUTC()
@@ -309,9 +308,11 @@ async function insertBooking(
       practitioner_id: input.practitionerId,
       availability_block_id: block.id,
       session_type_id: sessionType.id,
-      seeker_id: user?.id ?? null,
-      guest_name: input.name,
-      guest_email: input.email,
+      // D20: new rows always carry the account; guest fields stay null and are
+      // historical-only. Identity is resolved via resolveSeekerIdentity.
+      seeker_id: seekerId,
+      guest_name: null,
+      guest_email: null,
       booked_format: input.bookedFormat,
       booked_location_display: input.bookedFormat === 'in_person' ? block.location_display : null,
       booked_location_place_id: input.bookedFormat === 'in_person' ? block.location_place_id : null,
@@ -344,17 +345,21 @@ function safeCancelUrl(seekerToken: string): string | null {
   }
 }
 
-function validateDetails(input: BookingInput): string | null {
-  if (!input.name.trim()) return 'Enter your name.'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) return 'Enter a valid email.'
-  return null
+// Server-side auth gate (D20): booking creation requires an authenticated
+// seeker. Never rely on the UI hiding the flow.
+async function requireUser(): Promise<{ id: string } | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  return user ? { id: user.id } : null
 }
 
 // Path A: no on-platform charge at booking time (offsite payment, Connect
 // not ready, pending approval, or nothing to charge). One write, final status.
 export async function createBooking(input: BookingInput): Promise<BookingResult> {
-  const detailsError = validateDetails(input)
-  if (detailsError) return { ok: false, error: detailsError }
+  const user = await requireUser()
+  if (!user) return { ok: false, error: SIGN_IN_ERROR }
 
   const context = await loadContext(input.practitionerId, input.sessionTypeId)
   if (!context) return { ok: false, error: GENERIC_ERROR }
@@ -393,10 +398,10 @@ export async function createBooking(input: BookingInput): Promise<BookingResult>
   const paymentStatus =
     method === 'offsite' || !connectReady ? 'offsite' : 'unpaid'
 
-  const inserted = await insertBooking(input, block, sessionType, resolvedMode, status, paymentStatus)
+  const inserted = await insertBooking(input, user.id, block, sessionType, resolvedMode, status, paymentStatus)
   if ('error' in inserted) return { ok: false, error: inserted.error }
 
-  await finishBooking(inserted.id, inserted.seekerToken, input, block, practitioner.id, practitioner.full_name, sessionType.name, status, null)
+  await finishBooking(inserted.id, inserted.seekerToken, input, user.id, block, practitioner.id, practitioner.full_name, sessionType.name, status, null)
   // Outbound calendar event for instant-confirmed bookings (no-op for offsite /
   // pending_payment / pending_approval — the helper guards on status). A future
   // pending_approval approval-confirm flow must call this same helper (TD2).
@@ -414,8 +419,8 @@ export async function createBooking(input: BookingInput): Promise<BookingResult>
 // practitioner's connected account. The non-cancelled row IS the slot hold;
 // the exclusion constraint keeps it exclusive while the seeker pays.
 export async function createBookingHold(input: BookingInput): Promise<HoldResult> {
-  const detailsError = validateDetails(input)
-  if (detailsError) return { ok: false, error: detailsError }
+  const user = await requireUser()
+  if (!user) return { ok: false, error: SIGN_IN_ERROR }
 
   const context = await loadContext(input.practitionerId, input.sessionTypeId)
   if (!context) return { ok: false, error: GENERIC_ERROR }
@@ -452,9 +457,11 @@ export async function createBookingHold(input: BookingInput): Promise<HoldResult
 
   const resolvedMode = resolveConfirmationMode(sessionType, practitioner)
   const inserted = await insertBooking(
-    input, block, sessionType, resolvedMode, 'pending_payment', 'unpaid'
+    input, user.id, block, sessionType, resolvedMode, 'pending_payment', 'unpaid'
   )
   if ('error' in inserted) return { ok: false, error: inserted.error }
+
+  const identity = await accountIdentity(user.id)
 
   try {
     // Direct charge on the connected account, zero platform fee: no
@@ -465,7 +472,8 @@ export async function createBookingHold(input: BookingInput): Promise<HoldResult
         currency: CURRENCY,
         automatic_payment_methods: { enabled: true },
         metadata: { booking_id: inserted.id },
-        receipt_email: input.email.trim(),
+        // Stripe receipt goes to the account email (Amendment 3), when known.
+        ...(identity.email ? { receipt_email: identity.email } : {}),
       },
       { stripeAccount: practitioner.stripe_account_id }
     )
@@ -590,15 +598,23 @@ export async function finalizeBooking(bookingId: string): Promise<BookingResult>
     .eq('id', booking.session_type_id)
     .maybeSingle()
 
+  // New rows carry seeker_id with null guest fields; historical rows resolve
+  // to their guest fields (Amendment 3).
+  const identity = await resolveSeekerIdentity({
+    seeker_id: booking.seeker_id,
+    guest_name: booking.guest_name,
+    guest_email: booking.guest_email,
+  })
+
   await upsertClientRow(
     booking.practitioner_id,
     booking.seeker_id,
-    booking.guest_name ?? '',
-    booking.guest_email ?? ''
+    identity.name,
+    identity.email ?? ''
   )
   await sendBookingEmails({
-    seekerName: booking.guest_name ?? '',
-    seekerEmail: booking.guest_email ?? '',
+    seekerName: identity.name,
+    seekerEmail: identity.email ?? '',
     practitionerName: practitioner.full_name,
     practitionerEmail: await practitionerEmail(booking.practitioner_id),
     sessionName: sessionType?.name ?? 'Session',
@@ -665,6 +681,7 @@ async function finishBooking(
   bookingId: string,
   seekerToken: string,
   input: BookingInput,
+  seekerId: string,
   block: AvailabilityBlockRow,
   practitionerId: string,
   practitionerName: string,
@@ -672,15 +689,12 @@ async function finishBooking(
   status: string,
   amountLabel: string | null
 ): Promise<void> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const identity: SeekerIdentity = await accountIdentity(seekerId)
 
-  await upsertClientRow(practitionerId, user?.id ?? null, input.name.trim(), input.email.trim())
+  await upsertClientRow(practitionerId, seekerId, identity.name, identity.email ?? '')
   await sendBookingEmails({
-    seekerName: input.name.trim(),
-    seekerEmail: input.email.trim(),
+    seekerName: identity.name,
+    seekerEmail: identity.email ?? '',
     practitionerName,
     practitionerEmail: await practitionerEmail(practitionerId),
     sessionName,

@@ -9,6 +9,13 @@ function oneLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
 }
 
+// Practitioner-facing seeker identity line. Tolerates a missing email (an
+// account row whose email could not be resolved) without rendering "Name ()".
+function seekerLine(name: string, email: string): string {
+  const cleanName = name.trim() || 'A seeker'
+  return email.trim() ? `${cleanName} (${email.trim()})` : cleanName
+}
+
 // Booking emails. Wording must match the actual booking state and follow
 // brand-voice.md: calm, specific, no urgency, no exclamation points in
 // chrome, no em dashes. Email failures never fail the booking; callers
@@ -82,7 +89,7 @@ function practitionerBody(input: BookingEmailInput): string {
   }
   lines.push('')
   lines.push(`Session: ${input.sessionName}`)
-  lines.push(`Seeker: ${input.seekerName} (${input.seekerEmail})`)
+  lines.push(`Seeker: ${seekerLine(input.seekerName, input.seekerEmail)}`)
   lines.push(`When: ${input.whenLabel}`)
   lines.push(`Format: ${input.format === 'virtual' ? 'Virtual' : 'In person'}`)
   if (input.format === 'in_person' && input.locationDisplay) {
@@ -103,15 +110,17 @@ export async function sendBookingEmails(input: BookingEmailInput): Promise<void>
 
   const resend = new Resend(apiKey)
 
-  try {
-    await resend.emails.send({
-      from,
-      to: input.seekerEmail,
-      subject: seekerSubject(input),
-      text: seekerBody(input),
-    })
-  } catch {
-    // Email failure never fails the booking.
+  if (input.seekerEmail) {
+    try {
+      await resend.emails.send({
+        from,
+        to: input.seekerEmail,
+        subject: seekerSubject(input),
+        text: seekerBody(input),
+      })
+    } catch {
+      // Email failure never fails the booking.
+    }
   }
 
   if (input.practitionerEmail) {
@@ -181,7 +190,7 @@ function cancellationPractitionerBody(input: CancellationEmailInput): string {
   lines.push(`${who} this session.`)
   lines.push('')
   lines.push(`Session: ${input.sessionName}`)
-  lines.push(`Seeker: ${input.seekerName} (${input.seekerEmail})`)
+  lines.push(`Seeker: ${seekerLine(input.seekerName, input.seekerEmail)}`)
   lines.push(`When: ${input.whenLabel}`)
   if (input.offsiteObligation && input.refundAmount > 0) {
     lines.push('')

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
 import { getValidAccessToken, insertEvent, deleteEvent } from '@/lib/calendar'
 
 // Outbound Google Calendar sync, route-agnostic (mirrors the refund engine).
@@ -15,7 +16,7 @@ export async function createCalendarEventForBooking(bookingId: string): Promise<
       .from('bookings')
       .select(
         `id, practitioner_id, status, google_event_id, booked_format,
-         booked_location_display, start_datetime, end_datetime, guest_name, notes,
+         booked_location_display, start_datetime, end_datetime, seeker_id, guest_name, guest_email, notes,
          session_types ( name )`
       )
       .eq('id', bookingId)
@@ -37,7 +38,14 @@ export async function createCalendarEventForBooking(bookingId: string): Promise<
 
     const st = booking.session_types as unknown as { name: string } | null
     const sessionName = st?.name ?? 'Session'
-    const seekerName = (booking.guest_name as string | null)?.trim() || 'a seeker'
+    // Account-backed rows resolve to the account name; historical guest rows
+    // to guest_name (Amendment 3).
+    const identity = await resolveSeekerIdentity({
+      seeker_id: (booking.seeker_id as string | null) ?? null,
+      guest_name: (booking.guest_name as string | null) ?? null,
+      guest_email: (booking.guest_email as string | null) ?? null,
+    })
+    const seekerName = identity.name
     const where =
       booking.booked_format === 'in_person'
         ? booking.booked_location_display || 'In person'

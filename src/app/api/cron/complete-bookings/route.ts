@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { DateTime } from 'luxon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendReviewRequestEmail } from '@/lib/email'
+import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
 import { reviewUrl } from '@/lib/siteUrl'
 import { getValidAccessToken, queryFreeBusy } from '@/lib/calendar'
 
@@ -107,7 +108,7 @@ export async function GET(req: NextRequest) {
   const { data: candidates } = await admin
     .from('bookings')
     .select(
-      `id, seeker_token, guest_name, guest_email, practitioner_id, start_datetime,
+      `id, seeker_token, seeker_id, guest_name, guest_email, practitioner_id, start_datetime,
        session_types ( name ),
        practitioners ( full_name ),
        availability_blocks ( timezone )`
@@ -129,7 +130,25 @@ export async function GET(req: NextRequest) {
 
   for (const row of rows) {
     if (reviewedIds.has(row.id as string)) continue
-    if (!row.guest_email) continue
+
+    // Account-backed rows resolve to the account email; historical guest rows
+    // to guest_email (Amendment 3).
+    const identity = await resolveSeekerIdentity({
+      seeker_id: (row.seeker_id as string | null) ?? null,
+      guest_name: (row.guest_name as string | null) ?? null,
+      guest_email: (row.guest_email as string | null) ?? null,
+    })
+
+    // No resolvable email means no send will EVER succeed for this row. Stamp
+    // it so it leaves the candidate set instead of being re-scanned hourly
+    // forever (the pre-D20 behavior skipped without stamping).
+    if (!identity.email) {
+      await admin
+        .from('bookings')
+        .update({ review_request_sent_at: nowIso })
+        .eq('id', row.id)
+      continue
+    }
 
     const st = row.session_types as unknown as { name: string } | null
     const p = row.practitioners as unknown as { full_name: string } | null
@@ -137,8 +156,8 @@ export async function GET(req: NextRequest) {
 
     try {
       const sent = await sendReviewRequestEmail({
-        seekerName: (row.guest_name as string | null) ?? '',
-        seekerEmail: row.guest_email as string,
+        seekerName: identity.name,
+        seekerEmail: identity.email,
         practitionerName: p?.full_name ?? 'your practitioner',
         sessionName: st?.name ?? 'your session',
         whenLabel: whenLabel(row.start_datetime as string, block?.timezone ?? 'UTC'),

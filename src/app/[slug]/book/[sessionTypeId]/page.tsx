@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
 import Stripe from 'stripe'
 import { DateTime } from 'luxon'
+import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { accountIdentity } from '@/lib/seekerIdentity'
 import {
   generateSlots,
   blockHostsSessionFormat,
@@ -48,10 +50,15 @@ async function isConnectReady(accountId: string | null): Promise<boolean> {
 
 export default async function BookSessionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; sessionTypeId: string }>
+  // slot/format persist the seeker's selection through the magic-link
+  // round-trip (Amendment 4). Treated as hints and validated below.
+  searchParams: Promise<{ slot?: string; format?: string }>
 }) {
   const { slug, sessionTypeId } = await params
+  const sp = await searchParams
   const admin = createAdminClient()
 
   const { data: practitioner } = await admin
@@ -123,6 +130,24 @@ export default async function BookSessionPage({
 
   const modality = sessionType.modalities as unknown as { name: string; slug: string } | null
 
+  // D20: signed-in seekers book as their account; identity is display-locked
+  // in the flow. Unauthenticated seekers get the in-flow magic-link step.
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const seeker = user ? await accountIdentity(user.id) : null
+
+  // Server-side validation of the round-trip hint: the slot must be in the
+  // freshly generated set, the format must be a real option. Anything else is
+  // dropped and the seeker simply picks again.
+  const hintedSlot =
+    typeof sp.slot === 'string' && slots.some((s) => s.startUtc === sp.slot)
+      ? sp.slot
+      : null
+  const hintedFormat =
+    sp.format === 'virtual' || sp.format === 'in_person' ? sp.format : null
+
   return (
     <main className="min-h-screen bg-bg">
       <BookingFlow
@@ -141,6 +166,9 @@ export default async function BookSessionPage({
         }}
         slots={slots}
         blockCities={blockCities}
+        seeker={seeker ? { name: seeker.name, email: seeker.email } : null}
+        initialSlotStartUtc={hintedSlot}
+        initialFormat={hintedFormat}
         chargingNow={chargingNow}
         paymentMethod={paymentMethod}
         connectReady={connectReady}

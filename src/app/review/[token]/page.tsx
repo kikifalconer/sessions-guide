@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
 import ReviewForm from './ReviewForm'
 
 export const metadata = { title: 'Leave a review | sessions.guide' }
@@ -23,7 +24,7 @@ export default async function ReviewPage({
   const { data } = await admin
     .from('bookings')
     .select(
-      `id, status, guest_name,
+      `id, status, seeker_id, guest_name, guest_email,
        session_types ( name ),
        practitioners ( full_name, slug )`
     )
@@ -83,7 +84,14 @@ export default async function ReviewPage({
     )
   }
 
-  const reviewerName = (data.guest_name as string | null)?.trim() || 'A seeker'
+  // Account-backed rows show the account name; historical guest rows keep the
+  // guest_name fallback (Amendment 3).
+  const identity = await resolveSeekerIdentity({
+    seeker_id: (data.seeker_id as string | null) ?? null,
+    guest_name: (data.guest_name as string | null) ?? null,
+    guest_email: (data.guest_email as string | null) ?? null,
+  })
+  const reviewerName = identity.name
 
   return (
     <Shell>

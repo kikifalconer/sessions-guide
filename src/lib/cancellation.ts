@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 import { DateTime } from 'luxon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveCancellationPolicy } from '@/lib/booking'
+import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
 import { sendCancellationEmails } from '@/lib/email'
 import { deleteCalendarEventForBooking } from '@/lib/calendarSync'
 
@@ -97,6 +98,7 @@ type BookingContext = {
   start_datetime: string
   booked_format: 'virtual' | 'in_person'
   booked_location_display: string | null
+  seeker_id: string | null
   guest_name: string | null
   guest_email: string | null
   cancellation_policy: string | null // session type override
@@ -114,7 +116,7 @@ async function loadBooking(bookingId: string): Promise<BookingContext | null> {
     .select(
       `id, practitioner_id, session_type_id, availability_block_id, status,
        payment_status, amount_paid, amount_refunded, stripe_payment_intent_id, stripe_refund_id,
-       start_datetime, booked_format, booked_location_display, guest_name, guest_email,
+       start_datetime, booked_format, booked_location_display, seeker_id, guest_name, guest_email,
        session_types ( name, cancellation_policy ),
        practitioners ( full_name, cancellation_policy, stripe_account_id ),
        availability_blocks ( timezone )`
@@ -145,6 +147,7 @@ async function loadBooking(bookingId: string): Promise<BookingContext | null> {
     start_datetime: data.start_datetime,
     booked_format: data.booked_format,
     booked_location_display: data.booked_location_display,
+    seeker_id: data.seeker_id,
     guest_name: data.guest_name,
     guest_email: data.guest_email,
     cancellation_policy: st?.cancellation_policy ?? null,
@@ -309,9 +312,12 @@ export async function cancelBooking(args: {
   await deleteCalendarEventForBooking(bookingId)
 
   const when = whenLabel(booking.start_datetime, booking.timezone)
+  // Account-backed rows resolve to the seeker's account name/email; historical
+  // guest rows keep their guest fields (Amendment 3).
+  const identity = await resolveSeekerIdentity(booking)
   await sendCancellationEmails({
-    seekerName: booking.guest_name ?? '',
-    seekerEmail: booking.guest_email ?? '',
+    seekerName: identity.name,
+    seekerEmail: identity.email ?? '',
     practitionerName: booking.practitioner_name,
     practitionerEmail: await practitionerEmail(booking.practitioner_id),
     sessionName: booking.session_name,
