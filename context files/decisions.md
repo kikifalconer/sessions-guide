@@ -314,13 +314,11 @@ Nav links live in a config array typed `NavLink = { label: string; href: string;
 
 ---
 
-## Known Gap — Dashboard SESSIONS / AVAILABILITY CRUD not built (pre-launch blocker)
+## Known Gap — Dashboard SESSIONS / AVAILABILITY CRUD — RESOLVED (Phase 6, confirmed stale July 2026)
 
-Phase 2 docs claimed session-types and availability-blocks CRUD shipped. They did not. The dashboard shell (src/app/dashboard/DashboardShell.tsx) has SESSIONS and AVAILABILITY tabs, but they are client-side useState toggles that render empty headings; only PROFILE renders. No create / edit / delete UI exists for either, and there is no INSERT into session_types or availability_blocks anywhere under src/.
+The gap below was real when logged, and is now CLOSED: the Phase 6 CRUD passes shipped both tabs (pass 1 session types, pass 2 availability blocks). On disk and functional: `SessionsManager.tsx` / `SessionTypeForm.tsx` / `sessionTypeActions.ts` and `AvailabilityManager.tsx` / `AvailabilityBlockForm.tsx` / `availabilityActions.ts` under `src/app/dashboard/`, with the two-layer ownership pattern and soft delete. Confirmed by the Phase 7 audit (July 2026). CLIENTS and REVIEWS tabs remain placeholder-only.
 
-Consequence: session types and availability blocks can only be created via service-role script (scripts/seed-booking-dev.mjs) or raw SQL. No practitioner can build a bookable catalog through the product.
-
-Gate: hard blocker for real practitioner onboarding. Must be built before practitioners (invite or public) are expected to self-serve. Sequencing relative to Phase 5 (Seeker Discovery) is open: discovery surfaces practitioners who currently cannot create what seekers would book.
+Original entry (historical): Phase 2 docs claimed session-types and availability-blocks CRUD shipped. They did not. The dashboard shell had SESSIONS and AVAILABILITY tabs as empty useState toggles; no create / edit / delete UI existed and there was no INSERT into session_types or availability_blocks anywhere under src/. This was a hard blocker for real practitioner onboarding.
 
 ## Deferred UI — OAuth connect callback lands on PROFILE, not SETTINGS (June 2026)
 
@@ -482,3 +480,27 @@ stands. Revisit as v2 via Stripe Customer + SetupIntent.
 
 **Rationale:** Saved cards add PCI-scoped UI and Stripe Customer plumbing
 for low launch value.
+
+---
+
+## D20 Implementation Note (July 2026)
+
+Built in Phase 7 (Phase 6 was the dashboard CRUD passes; numbering gap closed
+in `current-phase.md`). Routes created: `/login` (single sign-in entry,
+magic-link primary + Google for returning practitioners), `/auth/confirm`
+(seeker OTP verify; accepts token_hash and PKCE code shapes; first verify
+creates the seekers row), `/account` (BOOKINGS / REVIEWS / SETTINGS), and the
+practitioner MY SESSIONS tab (shared components). `/auth/callback` creates
+practitioners rows only on the explicit `?source=join` marker. Migration
+`0011_seekers.sql` (RLS on, no policies, per 0010). Booking requires an
+authenticated seeker server-side; selection survives the auth round-trip as
+validated `?slot=&format=` URL params. Shared identity resolution lives in
+`src/lib/seekerIdentity.ts` (guest fields for historical rows, account
+otherwise) and is used by all email/calendar/review consumers; cancellation
+reuses the single `cancelBooking` engine; review submission was extracted to
+a shared core (`src/lib/reviewSubmit.ts`) serving both the token link and the
+authenticated dashboards. The claim-historical-guest-bookings flow was
+DESCOPED (pre-launch, no real guest rows exist). Newsletter consent is
+captured (D21) but nothing sends. Runtime verification and the Supabase
+manual items (apply 0011, custom SMTP, redirect allowlist) were outstanding
+at commit time — see `current-phase.md`.
