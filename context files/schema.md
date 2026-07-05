@@ -5,7 +5,22 @@ Living source of truth. Update after every migration. Check this before writing 
 ---
 
 ## auth.users (Supabase managed)
-Supabase handles this table. `id` is a UUID used as FK in `practitioners`.
+Supabase handles this table. `id` is a UUID used as FK in `practitioners` and `seekers`.
+
+---
+
+## seekers
+```sql
+-- added in 0011 (D20/D21); seeker profile, created on first magic-link verify.
+-- RLS enabled with NO policies (0010 pattern) — service-role access only.
+id                 uuid primary key references auth.users(id)  -- NOT a separate user_id
+full_name          text not null
+newsletter_opt_in  boolean not null default false  -- D21: express opt-in only, never inferred
+created_at         timestamptz not null default now()
+updated_at         timestamptz not null default now()
+```
+
+**Critical:** same identity pattern as `practitioners` — `seekers.id` = `auth.users.id`. A practitioner may also hold a seekers row (same auth user); neither table implies the other. New bookings write `seeker_id` and leave `guest_name`/`guest_email` null; historical guest rows keep their guest fields (D20).
 
 ---
 
