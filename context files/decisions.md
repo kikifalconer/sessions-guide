@@ -20,6 +20,8 @@ Running log of decisions made. Consult before generating code that touches these
 
 **Rate limiting on public actions (D22).** Pre-boards gate. Must land before or with discussion boards.
 
+**TD10 — Email send-result inspection.** The Resend SDK returns API errors in the response object (`{ data, error }`) rather than throwing; send helpers previously wrapped the call in try/catch only, so an API-level rejection returned as success and callers stamped their sent-flag anyway, suppressing the intended retry. A failed send was durably recorded as sent. Repo-wide pattern (trial reminders, review-request, and any other send site). Fix: helpers inspect `error`, return `false` on failure, log the failure; callers stamp their sent-flag only on genuine success, so a failed send retries on the next tick. Retry is bounded naturally by each query's window (trialing subscriptions by `trial_end`; review requests by their own window). Any send site lacking a natural retry bound is flagged for a follow-up decision on explicit attempt-capping. No schema change in this pass.
+
 ---
 
 ## Location Architecture — Path A (June 2026)
