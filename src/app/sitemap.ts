@@ -20,11 +20,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Cities come from derivableCities() so the slugs are byte-identical to what
   // /in/[city] resolves (same slugify(cityLabel(...)) path). Categories and
   // published practitioners keep their direct queries.
-  const [{ data: categories }, { data: practitioners }, cities] = await Promise.all([
-    supabase.from('categories').select('slug').order('sort_order'),
-    supabase.from('practitioners').select('slug, updated_at').eq('is_published', true),
-    derivableCities(),
-  ])
+  const [{ data: categories }, { data: practitioners }, cities, { data: pages }] =
+    await Promise.all([
+      supabase.from('categories').select('slug').order('sort_order'),
+      supabase.from('practitioners').select('slug, updated_at').eq('is_published', true),
+      derivableCities(),
+      // Published pages only (same gate as practitioner is_published).
+      supabase
+        .from('pages')
+        .select('slug, page_type, updated_at')
+        .eq('status', 'published'),
+    ])
 
   const entries: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: 'weekly', priority: 1 },
@@ -60,6 +66,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${SITE_URL}/${p.slug}/reviews`,
       changeFrequency: 'weekly',
       priority: 0.5,
+    })
+  }
+
+  // Published editorial guides and sage pages.
+  for (const pg of pages ?? []) {
+    const prefix = pg.page_type === 'sage' ? 'sages' : 'guides'
+    entries.push({
+      url: `${SITE_URL}/${prefix}/${pg.slug}`,
+      lastModified: pg.updated_at ? new Date(pg.updated_at) : undefined,
+      changeFrequency: 'weekly',
+      priority: 0.6,
     })
   }
 

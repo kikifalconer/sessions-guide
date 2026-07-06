@@ -19,10 +19,17 @@
   --color-border:  #D9D5CF;
   --color-surface: #EDEAE5;
   --color-hero-overlay: rgba(30, 18, 1, 0.10); /* 10% black wash over hero banners */
+  --color-hero-scrim: rgba(17, 17, 17, 0.55);  /* bottom gradient so hero title stays legible over any image */
 
   --font-display:  "SessionsGuide", Arial, sans-serif;
   --font-heading:  "itc-avant-garde-gothic-pro", Arial, sans-serif;
   --font-ui:       "degular-mono", monospace;
+}
+
+/* Pages hero: a bottom-anchored dark gradient so light title text is always
+   legible regardless of the underlying Cloudinary image. */
+.page-hero-scrim {
+  background-image: linear-gradient(to top, var(--color-hero-scrim), transparent 60%);
 }
 
 @theme inline {

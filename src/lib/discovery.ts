@@ -208,6 +208,16 @@ export async function discoverPractitioners(
   return rankCards(await hydrateCards(admin, ids))
 }
 
+// Cards for an explicit set of practitioner ids, published-only via the shared
+// hydrate (SECURITY: unpublished ids are dropped). NOT ranked — the caller
+// imposes its own order (e.g. Sage recommendations by sort_order). Used by the
+// pages system.
+export async function cardsByIds(ids: string[]): Promise<PractitionerCardData[]> {
+  if (ids.length === 0) return []
+  const admin = createAdminClient()
+  return hydrateCards(admin, ids)
+}
+
 // --- Geo helpers (derive-on-the-fly, haversine; TD4) ---------------------
 // Extracted from the old resolveCity so BOTH the city route and search call ONE
 // radius/union impl (deriveCityCenter + resolveByCenter). Behavior-preserving.

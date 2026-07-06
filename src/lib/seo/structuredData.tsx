@@ -205,6 +205,56 @@ export function cityPageJsonLd(opts: {
   }
 }
 
+// ---------- editorial guide page (/guides/[slug]) ----------
+
+export function articleJsonLd(opts: {
+  title: string
+  slug: string
+  description: string | null
+  image: string | null
+}) {
+  const SITE_URL = getSiteUrl()
+  const url = `${SITE_URL}/guides/${opts.slug}`
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    '@id': url,
+    headline: opts.title,
+    url,
+    ...(opts.description ? { description: opts.description } : {}),
+    ...(opts.image ? { image: opts.image } : {}),
+    isPartOf: { '@id': `${SITE_URL}/#website` },
+    publisher: { '@id': `${SITE_URL}/#organization` },
+  }
+}
+
+// ---------- sage page (/sages/[slug]) ----------
+
+export function sagePageJsonLd(opts: {
+  title: string
+  slug: string
+  description: string | null
+  image: string | null
+  sageName: string
+}) {
+  const SITE_URL = getSiteUrl()
+  const url = `${SITE_URL}/sages/${opts.slug}`
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    '@id': url,
+    url,
+    name: opts.title,
+    ...(opts.description ? { description: opts.description } : {}),
+    isPartOf: { '@id': `${SITE_URL}/#website` },
+    mainEntity: {
+      '@type': 'Person',
+      name: opts.sageName,
+      ...(opts.image ? { image: opts.image } : {}),
+    },
+  }
+}
+
 // ---------- breadcrumbs (e.g. Readings › Astrology) ----------
 
 export function breadcrumbJsonLd(items: { name: string; url: string }[]) {
