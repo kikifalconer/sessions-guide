@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { slugify } from '@/lib/slug'
+import type { Tier } from '@/lib/tiers'
 
 // Shared discovery query — the single spine behind category (now) and city +
 // search (later). Uses the service-role client (RLS is service-role-only here),
@@ -20,6 +21,8 @@ export type PractitionerCardData = {
   avgRating: number | null
   reviewCount: number
   hasPsychedelic: boolean // any modality slug === 'psychedelic-facilitation'
+  tier: Tier // subscription tier; 'alchemist' is featured first in ranking (D24)
+  createdAt: string // deterministic tie-break within the featured group (D24)
 }
 
 export type DiscoveryFilter = {
@@ -84,7 +87,7 @@ async function hydrateCards(admin: Admin, ids: string[]): Promise<PractitionerCa
   // Published practitioners only — public-safe columns.
   const { data: rows } = await admin
     .from('practitioners')
-    .select('id, slug, full_name, photo_url')
+    .select('id, slug, full_name, photo_url, subscription_tier, created_at')
     .in('id', ids)
     .eq('is_published', true)
   const practitioners = rows ?? []
@@ -164,16 +167,36 @@ async function hydrateCards(admin: Admin, ids: string[]): Promise<PractitionerCa
       avgRating: rating ? Math.round((rating.sum / rating.count) * 10) / 10 : null,
       reviewCount: rating?.count ?? 0,
       hasPsychedelic: mods.some((m) => m.slug === 'psychedelic-facilitation'),
+      tier: ((p.subscription_tier as string | null) ?? 'free') as Tier,
+      createdAt: (p.created_at as string | null) ?? '',
     }
   })
 }
 
+// Existing calm ordering: rated practitioners first (by rating), then by name.
+// Preserved verbatim so within-group order is unchanged.
+function baseSort(a: PractitionerCardData, b: PractitionerCardData): number {
+  if ((b.avgRating ?? -1) !== (a.avgRating ?? -1)) return (b.avgRating ?? -1) - (a.avgRating ?? -1)
+  return a.fullName.localeCompare(b.fullName)
+}
+
+// D24: 'alchemist' practitioners are featured first across all discovery
+// surfaces, then everyone else, each group keeping the existing sort. The
+// alchemist group additionally tie-breaks deterministically (createdAt, then id)
+// so featured placement is stable rather than order-of-arrival.
 function rankCards(cards: PractitionerCardData[]): PractitionerCardData[] {
-  // Stable, calm ordering: rated practitioners first (by rating), then by name.
-  return [...cards].sort((a, b) => {
-    if ((b.avgRating ?? -1) !== (a.avgRating ?? -1)) return (b.avgRating ?? -1) - (a.avgRating ?? -1)
-    return a.fullName.localeCompare(b.fullName)
+  const alchemist = cards.filter((c) => c.tier === 'alchemist')
+  const rest = cards.filter((c) => c.tier !== 'alchemist')
+
+  alchemist.sort((a, b) => {
+    const byBase = baseSort(a, b)
+    if (byBase !== 0) return byBase
+    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
   })
+  rest.sort(baseSort)
+
+  return [...alchemist, ...rest]
 }
 
 export async function discoverPractitioners(
