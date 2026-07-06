@@ -23,6 +23,7 @@ type ProfileRow = {
   link_2: string | null
   link_3: string | null
   is_published: boolean
+  subscription_tier: string | null
   practitioner_modalities: {
     is_primary: boolean
     modalities: {
@@ -56,7 +57,7 @@ async function fetchProfile(slug: string): Promise<ProfileRow | null> {
     .from('practitioners')
     .select(
       `id, full_name, slug, bio, tagline, photo_url, banner_url,
-       link_1, link_2, link_3, is_published,
+       link_1, link_2, link_3, is_published, subscription_tier,
        practitioner_modalities ( is_primary, modalities ( name, slug, categories ( name ) ) ),
        availability_blocks ( format, location_display ),
        session_types ( id, name, description, duration_minutes, photo_url, sort_order, pricing_model, modalities ( slug ) ),
@@ -148,8 +149,20 @@ export default async function PractitionerProfilePage({
       ? ratings.reduce((sum, r) => sum + r, 0) / ratingCount
       : null
 
-  const sessions: SessionCard[] = [...profile.session_types]
-    .sort((a, b) => a.sort_order - b.sort_order)
+  // Free-tier public display cap (D26): a 'free' practitioner shows only their
+  // first active session type by sort_order on the PUBLIC profile. Read-side
+  // only — no session_type row is mutated or deleted; the dashboard still shows
+  // every session type. Grandfathered practitioners are 'elevated', so their
+  // profiles are unaffected.
+  const sortedSessionTypes = [...profile.session_types].sort(
+    (a, b) => a.sort_order - b.sort_order
+  )
+  const visibleSessionTypes =
+    (profile.subscription_tier ?? 'free') === 'free'
+      ? sortedSessionTypes.slice(0, 1)
+      : sortedSessionTypes
+
+  const sessions: SessionCard[] = visibleSessionTypes
     .map((st) => ({
       id: st.id,
       name: st.name,
