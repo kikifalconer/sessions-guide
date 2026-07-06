@@ -385,6 +385,37 @@ primary key (sage_id, practitioner_id)
 
 ---
 
+## pages
+```sql
+id              uuid primary key default gen_random_uuid()
+slug            text not null unique
+title           text not null
+hero_image_url  text                 -- Cloudinary URL
+page_type       text not null check (page_type in ('sage', 'editorial'))
+sage_id         uuid references sages(id)   -- required when page_type='sage', null otherwise (check)
+seo_title       text
+seo_description text
+status          text not null check (status in ('draft', 'published')) default 'draft'
+created_at      timestamptz not null default now()
+updated_at      timestamptz not null default now()
+-- constraint pages_sage_id_matches_type: (sage + sage_id not null) or (editorial + sage_id null)
+```
+Added in `0013_pages_system.sql`. Admin-authored editorial guides (`/guides/[slug]`) and Sage pages (`/sages/[slug]`). RLS on, no policies (service-role only, per 0010). Only `status='published'` pages render publicly, appear in the sitemap, or emit JSON-LD. Admin editing gated on `user.id === ADMIN_USER_ID` (interim, see decisions.md).
+
+## page_blocks
+```sql
+id          uuid primary key default gen_random_uuid()
+page_id     uuid not null references pages(id) on delete cascade
+sort_order  int not null default 0
+block_type  text not null check (block_type in ('heading', 'paragraph', 'image', 'image_text'))
+content     jsonb not null default '{}'
+created_at  timestamptz not null default now()
+updated_at  timestamptz not null default now()
+```
+Added in `0013_pages_system.sql`. Index `page_blocks_page_id_sort (page_id, sort_order)`. `content` shapes by `block_type`: `heading { text, level: 'h2'|'h3' }`, `paragraph { text }`, `image { url, alt, width: 'full'|'inset' }`, `image_text { url, alt, text, image_side: 'left'|'right' }`.
+
+---
+
 ## Category Inference Pattern
 
 Always derive category via join — never store it directly:

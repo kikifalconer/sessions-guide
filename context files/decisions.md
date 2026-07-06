@@ -20,6 +20,8 @@ Running log of decisions made. Consult before generating code that touches these
 
 **Rate limiting on public actions (D22).** Pre-boards gate. Must land before or with discussion boards.
 
+**TD11 — Formalize admin role before a second admin exists.** The pages system (D27) gates admin editing on a single hard-coded `ADMIN_USER_ID` env var, fail-closed. This is fine for one admin (Kiki) but does not scale: a second admin, an audit trail of who edited what, or per-action authorization all require a real admin role (an `is_admin` flag or an `admins` table with RLS). **Gate:** replace the env check with a proper admin role before granting any second person admin access. No `created_by`/`updated_by` attribution is recorded on `pages`/`page_blocks` yet either.
+
 **TD10 — Email send-result inspection.** The Resend SDK returns API errors in the response object (`{ data, error }`) rather than throwing; send helpers previously wrapped the call in try/catch only, so an API-level rejection returned as success and callers stamped their sent-flag anyway, suppressing the intended retry. A failed send was durably recorded as sent. Repo-wide pattern (trial reminders, review-request, and any other send site). Fix: helpers inspect `error`, return `false` on failure, log the failure; callers stamp their sent-flag only on genuine success, so a failed send retries on the next tick. Retry is bounded naturally by each query's window (trialing subscriptions by `trial_end`; review requests by their own window). Any send site lacking a natural retry bound is flagged for a follow-up decision on explicit attempt-capping. No schema change in this pass.
 
 ---
@@ -524,3 +526,11 @@ Unique, single-redemption codes grant one free year of `elevated` via a Stripe s
 ## D26 — Downgrade semantics v1 (July 2026)
 
 On subscription cancellation or trial expiry, tier → `free`. Session type rows are never deleted; the public profile displays only the first active session type by `sort_order` for free-tier practitioners. Enforcement of the create-limit lives in `src/lib/tierLimits.ts` and must be wired into session type CRUD when that ships.
+
+---
+
+## D27 — Pages system (July 2026)
+
+Admin-authored content pages built from an ordered list of typed blocks stored as jsonb. Two public route trees share one block renderer: editorial guides at `/guides/[slug]` and Sage pages at `/sages/[slug]`. Block types this pass: `heading`, `paragraph`, `image`, `image_text` (content shapes in schema.md / `src/lib/pages.ts`). Tables `pages` + `page_blocks` (migration 0013), RLS on with no policies (service-role only, per 0010). Draft/published: only `status='published'` pages render publicly, appear in the sitemap, or emit JSON-LD (Article for editorial, ProfilePage for sage), mirroring the practitioner `is_published` gate and the H2 no-metadata-leak rule. Sage pages additionally render the Sage's `sage_recommendations` (by `sort_order`, published practitioners only) via the shared `PractitionerCard`. Images use the existing unsigned Cloudinary upload (`uploadToCloudinary`), never Supabase Storage.
+
+Editing is **admin-only via an interim env gate**: authenticated user whose `user.id === process.env.ADMIN_USER_ID`. No admin table or role flag this pass. The gate is FAIL-CLOSED (an unset `ADMIN_USER_ID` denies everyone). Every admin route and every server action re-checks it. See TD11.
