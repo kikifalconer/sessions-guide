@@ -504,3 +504,21 @@ DESCOPED (pre-launch, no real guest rows exist). Newsletter consent is
 captured (D21) but nothing sends. Runtime verification and the Supabase
 manual items (apply 0011, custom SMTP, redirect allowlist) were outstanding
 at commit time — see `current-phase.md`.
+
+---
+
+## D24 — Three-tier subscription model (July 2026)
+
+Supersedes the basic/premium model and the pricing in product-spec.md. Tiers: `free` (1 session type), `elevated` ($33.33/mo, $333.33/yr), `alchemist` ($77.77/mo, $777.77/yr, featured-first in discovery). Banner gating and co-branded page entitlements are deferred pending design decisions. Existing invite-only practitioners are grandfathered to `elevated`, comped, with no Stripe subscription object; webhook logic never downgrades a practitioner lacking a subscription row.
+
+---
+
+## D25 — Sage codes (July 2026)
+
+Unique, single-redemption codes grant one free year of `elevated` via a Stripe subscription with a 365-day trial, no payment method collected, `trial_settings.end_behavior.missing_payment_method = 'cancel'`. Auto-cancels at month 13 unless the practitioner adds payment. Reminder emails at T-14 and T-1 with a renew path. Codes are app-managed in a `sage_codes` table for attribution (one code per Sage). These are Sage program incentives, not influencer marketing; naming in code and copy uses "sage", never "influencer".
+
+---
+
+## D26 — Downgrade semantics v1 (July 2026)
+
+On subscription cancellation or trial expiry, tier → `free`. Session type rows are never deleted; the public profile displays only the first active session type by `sort_order` for free-tier practitioners. Enforcement of the create-limit lives in `src/lib/tierLimits.ts` and must be wired into session type CRUD when that ships.
