@@ -371,3 +371,64 @@ export async function sendInquiryNotification(input: InquiryEmailInput): Promise
     // Notification failure never fails the inquiry the seeker submitted.
   }
 }
+
+// --- Trial-end reminder emails (D25) -------------------------------------
+// Sent by the daily subscription-reminders cron at T-14 and T-1 before a
+// sage-code trial ends. Brand voice: calm and directional, no urgency or
+// countdown language, no em dashes, no exclamation points. All copy below is
+// PLACEHOLDER — Kiki to rework. Returns true only on a real send, so the cron
+// stamps its idempotency column only when mail actually went out.
+
+export type TrialReminderInput = {
+  to: string
+  endDateLabel: string // pre-formatted, e.g. 'March 3, 2027'
+  renewUrl: string
+  daysBefore: 14 | 1
+}
+
+// T-14 template.
+function trialReminder14Body(input: TrialReminderInput): string {
+  const lines: string[] = []
+  lines.push(`Your free year of Elevated ends on ${input.endDateLabel}.`)
+  lines.push('')
+  lines.push('Nothing will be charged. If you would like to stay on Elevated, add a payment method to renew.')
+  lines.push('If you do nothing, your account moves to the free tier on that date, and your public profile shows a single session type.')
+  lines.push('')
+  lines.push(`Renew here: ${input.renewUrl}`)
+  return lines.join('\n')
+}
+
+// T-1 template.
+function trialReminder1Body(input: TrialReminderInput): string {
+  const lines: string[] = []
+  lines.push(`Your free year of Elevated ends on ${input.endDateLabel}.`)
+  lines.push('')
+  lines.push('You will not be charged. To continue on Elevated, add a payment method to renew.')
+  lines.push('Without a payment method, your account moves to the free tier on that date, and your public profile shows a single session type.')
+  lines.push('')
+  lines.push(`Renew here: ${input.renewUrl}`)
+  return lines.join('\n')
+}
+
+export async function sendTrialReminderEmail(input: TrialReminderInput): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.RESEND_FROM_EMAIL
+  if (!apiKey || !from || !input.to) return false
+
+  const resend = new Resend(apiKey)
+  try {
+    await resend.emails.send({
+      from,
+      to: input.to,
+      subject: 'About your free year of Elevated',
+      text:
+        input.daysBefore === 14
+          ? trialReminder14Body(input)
+          : trialReminder1Body(input),
+    })
+    return true
+  } catch {
+    // Leave the row unstamped so the next cron pass retries.
+    return false
+  }
+}
