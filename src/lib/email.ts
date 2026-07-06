@@ -9,6 +9,35 @@ function oneLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
 }
 
+type SendParams = {
+  from: string
+  to: string
+  subject: string
+  text: string
+  replyTo?: string
+}
+
+// Single choke point for every Resend send (TD10). The Resend SDK returns API
+// errors in the response object ({ data, error }) rather than throwing, so a
+// try/catch alone treats an API-rejected send (bad recipient, auth, rate limit)
+// as success. This inspects `error` AND catches thrown network failures; BOTH
+// resolve to false so a caller that stamps a sent-flag only stamps on a genuine
+// send. `context` names the recipient class + template (never the address) so a
+// failure is debuggable without logging PII or secrets.
+async function deliver(resend: Resend, params: SendParams, context: string): Promise<boolean> {
+  try {
+    const { error } = await resend.emails.send(params)
+    if (error) {
+      console.error(`[email] send failed (${context}):`, error.message ?? String(error))
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error(`[email] send threw (${context}):`, err)
+    return false
+  }
+}
+
 // Practitioner-facing seeker identity line. Tolerates a missing email (an
 // account row whose email could not be resolved) without rendering "Name ()".
 function seekerLine(name: string, email: string): string {
@@ -110,30 +139,32 @@ export async function sendBookingEmails(input: BookingEmailInput): Promise<void>
 
   const resend = new Resend(apiKey)
 
+  // Fire-and-forget: deliver() logs a failure but never throws, so a bad send
+  // still cannot fail the booking. No sent-flag is stamped here.
   if (input.seekerEmail) {
-    try {
-      await resend.emails.send({
+    await deliver(
+      resend,
+      {
         from,
         to: input.seekerEmail,
         subject: seekerSubject(input),
         text: seekerBody(input),
-      })
-    } catch {
-      // Email failure never fails the booking.
-    }
+      },
+      'booking:seeker'
+    )
   }
 
   if (input.practitionerEmail) {
-    try {
-      await resend.emails.send({
+    await deliver(
+      resend,
+      {
         from,
         to: input.practitionerEmail,
         subject: practitionerSubject(input),
         text: practitionerBody(input),
-      })
-    } catch {
-      // Same.
-    }
+      },
+      'booking:practitioner'
+    )
   }
 }
 
@@ -211,30 +242,32 @@ export async function sendCancellationEmails(input: CancellationEmailInput): Pro
 
   const resend = new Resend(apiKey)
 
+  // Fire-and-forget: deliver() logs a failure but never throws, so a bad send
+  // still cannot fail the cancellation. No sent-flag is stamped here.
   if (input.seekerEmail) {
-    try {
-      await resend.emails.send({
+    await deliver(
+      resend,
+      {
         from,
         to: input.seekerEmail,
         subject: 'Your session has been cancelled',
         text: cancellationSeekerBody(input),
-      })
-    } catch {
-      // Email failure never fails the cancellation.
-    }
+      },
+      'cancellation:seeker'
+    )
   }
 
   if (input.practitionerEmail) {
-    try {
-      await resend.emails.send({
+    await deliver(
+      resend,
+      {
         from,
         to: input.practitionerEmail,
         subject: input.cancelledBy === 'seeker' ? 'A session was cancelled' : 'Session cancelled',
         text: cancellationPractitionerBody(input),
-      })
-    } catch {
-      // Same.
-    }
+      },
+      'cancellation:practitioner'
+    )
   }
 }
 
@@ -274,18 +307,18 @@ export async function sendReviewRequestEmail(
   if (!apiKey || !from || !input.seekerEmail) return false
 
   const resend = new Resend(apiKey)
-  try {
-    await resend.emails.send({
+  // Returns false on an API-rejected or thrown send (TD10) so the caller leaves
+  // the booking unstamped and the next cron pass retries.
+  return deliver(
+    resend,
+    {
       from,
       to: input.seekerEmail,
       subject: `How was your session with ${oneLine(input.practitionerName)}`,
       text: reviewRequestBody(input),
-    })
-    return true
-  } catch {
-    // Leave unstamped so the next cron pass retries.
-    return false
-  }
+    },
+    'review-request'
+  )
 }
 
 // --- Inquiry notification (to the practitioner) -------------------------
@@ -341,16 +374,18 @@ export async function sendReportNotice(input: ReportNoticeInput): Promise<void> 
   const to = process.env.REPORT_NOTICE_EMAIL ?? 'hello@sessions.guide'
 
   const resend = new Resend(apiKey)
-  try {
-    await resend.emails.send({
+  // Fire-and-forget: deliver() logs a failure but never throws, so notification
+  // failure never fails the report write.
+  await deliver(
+    resend,
+    {
       from,
       to,
       subject: 'A review was reported',
       text: reportNoticeBody(input),
-    })
-  } catch {
-    // Notification failure never fails the report write.
-  }
+    },
+    'report-notice'
+  )
 }
 
 export async function sendInquiryNotification(input: InquiryEmailInput): Promise<void> {
@@ -359,17 +394,19 @@ export async function sendInquiryNotification(input: InquiryEmailInput): Promise
   if (!apiKey || !from || !input.practitionerEmail) return
 
   const resend = new Resend(apiKey)
-  try {
-    await resend.emails.send({
+  // Fire-and-forget: deliver() logs a failure but never throws, so notification
+  // failure never fails the inquiry the seeker submitted.
+  await deliver(
+    resend,
+    {
       from,
       to: input.practitionerEmail,
       replyTo: input.seekerEmail,
       subject: 'New inquiry',
       text: inquiryBody(input),
-    })
-  } catch {
-    // Notification failure never fails the inquiry the seeker submitted.
-  }
+    },
+    'inquiry'
+  )
 }
 
 // --- Trial-end reminder emails (D25) -------------------------------------
@@ -416,8 +453,11 @@ export async function sendTrialReminderEmail(input: TrialReminderInput): Promise
   if (!apiKey || !from || !input.to) return false
 
   const resend = new Resend(apiKey)
-  try {
-    await resend.emails.send({
+  // Returns false on an API-rejected or thrown send (TD10) so the cron leaves
+  // the reminder column unstamped and the next daily pass retries.
+  return deliver(
+    resend,
+    {
       from,
       to: input.to,
       subject: 'About your free year of Elevated',
@@ -425,10 +465,7 @@ export async function sendTrialReminderEmail(input: TrialReminderInput): Promise
         input.daysBefore === 14
           ? trialReminder14Body(input)
           : trialReminder1Body(input),
-    })
-    return true
-  } catch {
-    // Leave the row unstamped so the next cron pass retries.
-    return false
-  }
+    },
+    `trial-reminder:${input.daysBefore}`
+  )
 }

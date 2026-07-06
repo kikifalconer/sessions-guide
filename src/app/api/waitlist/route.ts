@@ -42,14 +42,20 @@ export async function POST(req: NextRequest) {
   if (apiKey && from) {
     try {
       const resend = new Resend(apiKey)
-      await resend.emails.send({
+      // The Resend SDK returns API errors in-object rather than throwing (TD10).
+      // No sent-flag is stamped here, so failure is non-fatal; log for debugging.
+      const { error: sendError } = await resend.emails.send({
         from,
         to: NOTIFY_TO,
         subject: 'New waitlist signup',
         text: `Email: ${email}\nReceived: ${new Date().toISOString()}`,
       })
-    } catch {
+      if (sendError) {
+        console.error('[waitlist] notification send failed:', sendError.message ?? String(sendError))
+      }
+    } catch (err) {
       // Internal notification failure is non-fatal.
+      console.error('[waitlist] notification send threw:', err)
     }
   }
 

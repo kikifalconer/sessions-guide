@@ -41,15 +41,21 @@ export async function POST(req: NextRequest) {
   if (apiKey && from) {
     try {
       const resend = new Resend(apiKey)
-      await resend.emails.send({
+      // The Resend SDK returns API errors in-object rather than throwing (TD10).
+      // No sent-flag is stamped here, so failure is non-fatal; log for debugging.
+      const { error: sendError } = await resend.emails.send({
         from,
         to: NOTIFY_TO,
         replyTo: email,
         subject: `${topic} form: ${oneLine(name).slice(0, 120)}`,
         text: `Topic: ${topic}\nName: ${name}\nEmail: ${email}\n\n${message.slice(0, 5000)}`,
       })
-    } catch {
+      if (sendError) {
+        console.error('[contact] send failed:', sendError.message ?? String(sendError))
+      }
+    } catch (err) {
       // Non-fatal: the submitter is still thanked.
+      console.error('[contact] send threw:', err)
     }
   }
 

@@ -163,7 +163,13 @@ export async function GET(req: NextRequest) {
         whenLabel: whenLabel(row.start_datetime as string, block?.timezone ?? 'UTC'),
         reviewUrl: reviewUrl(row.seeker_token as string),
       })
-      // Stamp only on a real send so a transient failure retries next pass.
+      // Stamp only on a real send (TD10: sendReviewRequestEmail now returns
+      // false on an API-rejected send, not just a thrown one) so a failure
+      // retries next pass.
+      // TODO(TD10): unbounded retry — a resolvable recipient that Resend
+      // permanently rejects is retried every hour with no upper bound, because a
+      // completed booking never ages out of the candidate query (only a lower
+      // 24h bound exists). Needs a follow-up attempt-cap decision.
       if (sent) {
         await admin
           .from('bookings')
