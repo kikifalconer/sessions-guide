@@ -40,7 +40,7 @@ link_3              text
 website_url         text  -- legacy; migrated to link_1 in 0002_add_link_columns.sql
 instagram_url       text  -- legacy; migrated to link_2
 youtube_url         text  -- legacy; migrated to link_3
-subscription_tier   text check (subscription_tier in ('basic', 'premium')) default 'basic'
+subscription_tier   text check (subscription_tier in ('free', 'elevated', 'alchemist')) default 'free'  -- 0012; was basic/premium, grandfathered basic->elevated
 is_published        boolean not null default false
 stripe_customer_id  text
 stripe_account_id   text  -- Stripe Connect account for receiving session payments
@@ -333,14 +333,31 @@ id                      uuid primary key default gen_random_uuid()
 practitioner_id         uuid not null references practitioners(id)
 stripe_subscription_id  text not null unique
 stripe_customer_id      text not null
-tier                    text not null check (tier in ('basic', 'premium'))
+tier                    text not null check (tier in ('free', 'elevated', 'alchemist'))  -- 0012; was basic/premium
 billing_cycle           text not null check (billing_cycle in ('monthly', 'annual'))
-status                  text not null  -- mirrors Stripe: active, past_due, canceled, etc.
+status                  text not null  -- mirrors Stripe: active, past_due, canceled, trialing, etc.
 current_period_start    timestamptz
 current_period_end      timestamptz
+trial_end               timestamptz  -- 0012; set for sage-code trial subs (D25)
+reminder_14_sent_at     timestamptz  -- 0012; T-14 trial-end reminder idempotency stamp
+reminder_1_sent_at      timestamptz  -- 0012; T-1 trial-end reminder idempotency stamp
 created_at              timestamptz not null default now()
 updated_at              timestamptz not null default now()
 ```
+
+---
+
+## sage_codes
+```sql
+id           uuid primary key default gen_random_uuid()
+code         text not null unique         -- SAGE-XXXX-XXXX, unambiguous charset
+label        text                         -- who this code is for, human-readable
+redeemed_by  uuid references practitioners(id)  -- null until redeemed
+redeemed_at  timestamptz
+expires_at   timestamptz                  -- code validity window, NOT subscription end
+created_at   timestamptz not null default now()
+```
+Added in `0012_three_tier_billing.sql` (D25). RLS on, no policies — service-role access only (per 0010). Single redemption is enforced at redemption time by a conditional update (`... set redeemed_by = $1 where code = $2 and redeemed_by is null returning id`), so two concurrent redemptions cannot both win. Redemption creates a Stripe subscription on the `elevated_monthly` price with a 365-day trial and `trial_settings.end_behavior.missing_payment_method = 'cancel'`.
 
 ---
 
