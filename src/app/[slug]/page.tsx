@@ -7,6 +7,7 @@ import InfoStrip, { type ProfileLink } from './InfoStrip'
 import AboutSection from './AboutSection'
 import SessionsSection, { type SessionCard } from './SessionsSection'
 import { detectPlatform } from '@/lib/links'
+import { JsonLd, practitionerJsonLd, type SessionTypeSeo } from '@/lib/seo/structuredData'
 
 const PSYCHEDELIC_DISCLAIMER =
   'Psychedelic journey facilitation may be subject to local laws and regulations. Practitioners and clients are solely responsible for ensuring compliance with the laws of their jurisdiction.'
@@ -44,6 +45,10 @@ type ProfileRow = {
     photo_url: string | null
     sort_order: number
     pricing_model: string
+    price: number | null
+    price_min: number | null
+    price_max: number | null
+    format: string
     modalities: { slug: string } | null
   }[]
   reviews: { rating: number }[]
@@ -60,7 +65,7 @@ async function fetchProfile(slug: string): Promise<ProfileRow | null> {
        link_1, link_2, link_3, is_published, subscription_tier,
        practitioner_modalities ( is_primary, modalities ( name, slug, categories ( name ) ) ),
        availability_blocks ( format, location_display ),
-       session_types ( id, name, description, duration_minutes, photo_url, sort_order, pricing_model, modalities ( slug ) ),
+       session_types ( id, name, description, duration_minutes, photo_url, sort_order, pricing_model, price, price_min, price_max, format, modalities ( slug ) ),
        reviews ( rating )`
     )
     .eq('slug', slug)
@@ -91,9 +96,16 @@ export async function generateMetadata({
   // Never leak an unpublished practitioner's name/tagline via metadata: the page
   // body 404s for non-owners, so the <head> must not identify them either (H2).
   if (!profile || !profile.is_published) return { title: 'sessions.guide' }
+  const primaryModality = [...profile.practitioner_modalities]
+    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))[0]?.modalities?.name
+  // Description: tagline, falling back to a truncated bio (no em dashes here).
+  const description =
+    profile.tagline ?? (profile.bio ? `${profile.bio.slice(0, 155).trimEnd()}` : undefined)
   return {
-    title: `${profile.full_name} | sessions.guide`,
-    description: profile.tagline ?? undefined,
+    title: primaryModality
+      ? `${profile.full_name} - ${primaryModality} | sessions.guide`
+      : `${profile.full_name} | sessions.guide`,
+    description,
   }
 }
 
@@ -172,8 +184,47 @@ export default async function PractitionerProfilePage({
       isInquire: st.pricing_model === 'inquire',
     }))
 
+  // JSON-LD reuses the data already loaded above. It reflects exactly what the
+  // public page shows: the capped visible session types (D26) in makesOffer,
+  // city-only locations (never full addresses), aggregateRating only when there
+  // are published reviews. Rendered only for published profiles (owner preview
+  // of an unpublished profile must not emit structured data).
+  const seoModalities = sortedModalities
+    .map((pm) => pm.modalities)
+    .filter((m): m is NonNullable<typeof m> => Boolean(m))
+    .map((m) => ({ name: m.name, slug: m.slug }))
+  const practitionerSeo = practitionerJsonLd({
+    practitioner: {
+      slug: profile.slug,
+      full_name: profile.full_name,
+      bio: profile.bio,
+      tagline: profile.tagline,
+      photo_url: profile.photo_url,
+      links: [profile.link_1, profile.link_2, profile.link_3].filter(
+        (u): u is string => Boolean(u)
+      ),
+    },
+    modalities: seoModalities,
+    cities: locations.filter((c) => c !== 'Virtual'),
+    sessionTypes: visibleSessionTypes.map((st) => ({
+      name: st.name,
+      description: st.description,
+      duration_minutes: st.duration_minutes,
+      pricing_model: st.pricing_model as SessionTypeSeo['pricing_model'],
+      price: st.price,
+      price_min: st.price_min,
+      price_max: st.price_max,
+      format: st.format as SessionTypeSeo['format'],
+    })),
+    rating:
+      ratingCount > 0 && ratingAverage != null
+        ? { average: ratingAverage, count: ratingCount }
+        : null,
+  })
+
   return (
     <main className="min-h-screen bg-bg">
+      {profile.is_published && <JsonLd data={practitionerSeo} />}
       {!profile.is_published && isOwner && (
         <div className="bg-olive px-6 py-3 text-center">
           <p className="caption text-light">

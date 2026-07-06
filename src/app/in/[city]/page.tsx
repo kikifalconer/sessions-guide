@@ -4,6 +4,7 @@ import { discoverInCity } from '@/lib/discovery'
 import PractitionerCard from '@/components/PractitionerCard'
 import SiteHeader from '@/components/site-header'
 import { DISCOVERY_HOME } from '@/lib/routes'
+import { JsonLd, cityPageJsonLd } from '@/lib/seo/structuredData'
 
 const PSYCHEDELIC_DISCLAIMER =
   'Psychedelic journey facilitation may be subject to local laws and regulations. Practitioners and clients are solely responsible for ensuring compliance with the laws of their jurisdiction.'
@@ -15,7 +16,11 @@ export async function generateMetadata({
 }) {
   const { city } = await params
   const result = await discoverInCity(city)
-  return { title: result ? `${result.displayCity} | sessions.guide` : 'sessions.guide' }
+  if (!result) return { title: 'sessions.guide' }
+  return {
+    title: `Healing & Wellness Practitioners in ${result.displayCity} | sessions.guide`,
+    description: `Find and book wellness practitioners in ${result.displayCity} on sessions.guide. Virtual sessions are available everywhere, wherever you are.`,
+  }
 }
 
 export default async function CityPage({
@@ -36,8 +41,15 @@ export default async function CityPage({
 
   const base = `/in/${city}`
 
+  const citySeo = cityPageJsonLd({
+    cityName: displayCity,
+    citySlug: city,
+    practitioners: cards.map((c) => ({ slug: c.slug, full_name: c.fullName })),
+  })
+
   return (
     <main className="min-h-screen bg-bg">
+      <JsonLd data={citySeo} />
       <SiteHeader />
 
       <div className="mx-auto w-full max-w-[1200px] px-6 py-12">

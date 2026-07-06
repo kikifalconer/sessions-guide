@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { discoverPractitioners } from '@/lib/discovery'
 import PractitionerCard from '@/components/PractitionerCard'
 import SiteHeader from '@/components/site-header'
+import { getSiteUrl } from '@/lib/siteUrl'
+import { JsonLd, categoryPageJsonLd, breadcrumbJsonLd } from '@/lib/seo/structuredData'
 
 const CATEGORY_HERO: Record<string, { image: string; text: string }> = {
   'energy-healing': {
@@ -59,6 +61,25 @@ const CATEGORY_HERO: Record<string, { image: string; text: string }> = {
 const PSYCHEDELIC_DISCLAIMER =
   'Psychedelic journey facilitation may be subject to local laws and regulations. Practitioners and clients are solely responsible for ensuring compliance with the laws of their jurisdiction.'
 
+// Title: "{Category} Practitioners - {as many modalities as fit ~60 chars} |
+// sessions.guide". No em dashes; the modality list is comma-separated and the
+// full list lives in the description. Falls back cleanly when no modalities fit.
+function categoryTitle(categoryName: string, modalityNames: string[]): string {
+  const suffix = ' | sessions.guide'
+  const prefix = `${categoryName} Practitioners`
+  if (modalityNames.length === 0) return `${prefix}${suffix}`
+  // Always include the first modality (the keyword whole point), then add more
+  // while the title stays near ~60 chars. Full list lives in the description.
+  const budget = 60 - prefix.length - 3 - suffix.length // 3 for " - "
+  let list = modalityNames[0]
+  for (const name of modalityNames.slice(1)) {
+    const next = `${list}, ${name}`
+    if (next.length > budget) break
+    list = next
+  }
+  return `${prefix} - ${list}${suffix}`
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -66,8 +87,28 @@ export async function generateMetadata({
 }) {
   const { category } = await params
   const admin = createAdminClient()
-  const { data } = await admin.from('categories').select('name').eq('slug', category).maybeSingle()
-  return { title: data ? `${data.name} | sessions.guide` : 'sessions.guide' }
+  const { data: cat } = await admin
+    .from('categories')
+    .select('id, name')
+    .eq('slug', category)
+    .maybeSingle()
+  if (!cat) return { title: 'sessions.guide' }
+
+  // All approved modalities in this category (decision 6): keyword payload for
+  // both the title and the description.
+  const { data: mods } = await admin
+    .from('modalities')
+    .select('name')
+    .eq('category_id', cat.id)
+    .eq('is_approved', true)
+    .order('name')
+  const modalityNames = (mods ?? []).map((m) => m.name as string)
+
+  const description = modalityNames.length
+    ? `Find and book ${cat.name} practitioners on sessions.guide, including ${modalityNames.join(', ')}. Virtual and in-person sessions available.`
+    : `Find and book ${cat.name} practitioners on sessions.guide. Virtual and in-person sessions available.`
+
+  return { title: categoryTitle(cat.name, modalityNames), description }
 }
 
 export default async function CategoryPage({
@@ -80,7 +121,7 @@ export default async function CategoryPage({
 
   const { data: cat } = await admin
     .from('categories')
-    .select('name, slug')
+    .select('id, name, slug')
     .eq('slug', category)
     .maybeSingle()
   if (!cat) notFound()
@@ -90,11 +131,35 @@ export default async function CategoryPage({
   // the render on hero.image/hero.text. 404 instead of throwing a 500 (M10).
   if (!hero) notFound()
 
-  const practitioners = await discoverPractitioners({ categorySlug: cat.slug })
+  // Decision 6: one targeted query for ALL approved modalities in the category
+  // (the JSON-LD keyword payload), alongside the existing practitioner fetch.
+  const [{ data: mods }, practitioners] = await Promise.all([
+    admin
+      .from('modalities')
+      .select('name, slug')
+      .eq('category_id', cat.id)
+      .eq('is_approved', true)
+      .order('name'),
+    discoverPractitioners({ categorySlug: cat.slug }),
+  ])
+  const modalities = (mods ?? []).map((m) => ({ name: m.name as string, slug: m.slug as string }))
   const hasPsychedelic = practitioners.some((p) => p.hasPsychedelic)
+
+  const categorySeo = categoryPageJsonLd({
+    categoryName: cat.name,
+    categorySlug: cat.slug,
+    intro: hero.text,
+    modalities,
+    practitioners: practitioners.map((p) => ({ slug: p.slug, full_name: p.fullName })),
+  })
+  const breadcrumbSeo = breadcrumbJsonLd([
+    { name: 'Explore', url: `${getSiteUrl()}/explore` },
+    { name: cat.name, url: `${getSiteUrl()}/explore/${cat.slug}` },
+  ])
 
   return (
     <main className="min-h-screen bg-bg">
+      <JsonLd data={[categorySeo, breadcrumbSeo]} />
       <SiteHeader />
 
       {/* Full-width hero */}
