@@ -24,13 +24,22 @@ Incorporated in Canada. Launch markets: United States, Australia, Indonesia.
 
 ## Subscription Tiers
 
-**Basic — Listed** (~$22/month or discounted annual)
-Profile, booking calendar, payment setup, client history, review collection, Sage-eligible.
+Three tiers (D24). Supersedes the earlier Basic/Premium (~$22/$55) model.
 
-**Premium — Featured** (~$55/month or discounted annual)
-Everything in Basic + priority search placement, email marketing tools, rebooking automation, analytics dashboard, extended portfolio slots, promoted across platform channels.
+**Tier One (Free)** ($0)
+One session type. The public profile shows only the first active session type by sort order. Profile, booking calendar, payment setup, client history, review collection, Sage-eligible.
 
-Inactive/lapsed subscriptions: soft-hide the profile. Preserve all data.
+**Elevated** ($33.33/month or $333.33/year)
+Everything in Free, plus unlimited session types and Google Calendar integration.
+
+**Alchemist** ($77.77/month or $777.77/year)
+Everything in Elevated, plus featured-first placement across all search and discovery surfaces.
+
+**Sage codes (D25):** unique, single-redemption codes grant one free year of Elevated via a Stripe subscription with a 365-day trial and no card collected. Stripe auto-cancels at trial end unless a payment method is added. Reminder emails go out at T-14 and T-1 with a renew link.
+
+**Deferred, design pending:** profile banner gating by tier and co-branded page entitlements are not yet defined. They are excluded from this model until those design decisions land.
+
+**Downgrade + grandfathering:** existing invite-only practitioners are moved to Elevated, comped, with no Stripe subscription object (webhook logic never downgrades a practitioner without a subscription row). On cancellation or trial expiry, the tier drops to Free (D26): session type rows are never deleted, and the public profile shows only the first active session type. Profile data is always preserved.
 
 ---
 
@@ -47,6 +56,7 @@ Inactive/lapsed subscriptions: soft-hide the profile. Preserve all data.
 | Media storage | Cloudinary only. No Supabase Storage |
 | Calendar sync | Google Calendar, two-way, OAuth 2.0 |
 | Transaction fees | None. Subscription revenue only |
+| Subscription tiers | Free / Elevated ($33.33mo, $333.33yr) / Alchemist ($77.77mo, $777.77yr). Alchemist featured first in discovery; Sage codes grant a free year of Elevated (D24/D25/D26) |
 
 ---
 
