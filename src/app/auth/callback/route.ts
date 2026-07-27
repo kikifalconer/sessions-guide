@@ -1,7 +1,9 @@
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveAuthDestination } from '@/lib/authDestination'
+import { INVITE_COOKIE, isValidInviteCode } from '@/lib/invite'
 
 // OAuth callback. Exchanges the code for a session.
 //
@@ -11,8 +13,8 @@ import { resolveAuthDestination } from '@/lib/authDestination'
 // routes by account shape instead — a seeker completing auth here must never
 // gain a practitioners row.
 // Only allow same-origin relative redirect targets. Rejects absolute URLs,
-// protocol-relative (`//host`), backslash tricks, and userinfo (`@host`) forms
-// that could turn `${origin}${next}` into an off-site redirect (M5).
+// protocol-relative (`//host`), and backslash (`/\host`) forms that could turn
+// `${origin}${next}` into an off-site redirect (M5).
 function safeNext(raw: string | null): string | null {
   if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) {
     return null
@@ -32,6 +34,18 @@ export async function GET(request: Request) {
 
     if (!error && data.user) {
       if (fromJoin) {
+        // Hard server-side invite gate (H4, F-13). ?source=join is attacker-
+        // controllable — the OAuth flow can be initiated with an arbitrary
+        // redirect_to — so this route must re-validate the invite cookie
+        // before creating a practitioners row, exactly as /join and
+        // signUpWithEmail do. Without this check, the Google path was a
+        // complete bypass of the invite-only gate: the row alone is what
+        // /dashboard authorizes on.
+        const cookieStore = await cookies()
+        if (!isValidInviteCode(cookieStore.get(INVITE_COOKIE)?.value)) {
+          return NextResponse.redirect(`${origin}/?error=invite`)
+        }
+
         const admin = createAdminClient()
         await admin.from('practitioners').upsert(
           {
