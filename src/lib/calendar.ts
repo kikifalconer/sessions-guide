@@ -163,6 +163,13 @@ export async function getValidAccessToken(practitionerId: string): Promise<strin
       .from('calendar_integrations')
       .update({ sync_enabled: false, updated_at: DateTime.utc().toISO() })
       .eq('practitioner_id', practitionerId)
+    // Drop the cached free/busy windows with it (F-16). The hourly cron only
+    // refreshes sync_enabled=true integrations, so anything left behind freezes
+    // at the moment the grant died and goes on suppressing real availability
+    // for the rest of the 56-day sync horizon. A degraded integration means
+    // "no external conflicts known" — the same posture liveFreeBusyForWindow
+    // takes, and the same cleanup the explicit-disconnect path performs.
+    await admin.from('calendar_busy').delete().eq('practitioner_id', practitionerId)
     return null
   }
 }
