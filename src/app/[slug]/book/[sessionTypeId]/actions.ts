@@ -91,18 +91,25 @@ function getStripe(): Stripe | null {
 export async function expireStaleHolds(practitionerId: string): Promise<void> {
   const admin = createAdminClient()
 
-  // Reclaim stale UNPAID pending-approval holds so a guest cannot indefinitely
-  // occupy a practitioner's calendar with never-approved bookings (M2). These
-  // carry no PaymentIntent (never charged), so no Stripe cleanup is needed.
-  // Offsite bookings are deliberately NOT expired here — decisions.md records
-  // that offsite rows are durable.
+  // Reclaim stale pending-approval holds so a guest cannot indefinitely occupy
+  // a practitioner's calendar with never-approved bookings (M2). These carry no
+  // PaymentIntent — resolveChargingNow always returns false for
+  // pending_approval — so no Stripe cleanup is needed whatever payment_status
+  // says.
+  //
+  // F-18: this deliberately does NOT filter on payment_status = 'unpaid'.
+  // createBooking writes 'offsite' both when the practitioner CHOSE offsite and
+  // when Connect merely isn't ready yet, so that filter silently made every
+  // approval hold on a non-Connect practitioner immortal: unapprovable while
+  // GAP-1 is open, and unexpirable here. OD-2's durability decision was written
+  // about offsite pending_PAYMENT bookings; approval holds are a different
+  // thing and expire on age alone. Re-log against OD-2 if that reading changes.
   const approvalCutoff = DateTime.utc().minus({ days: STALE_APPROVAL_DAYS }).toISO()
   await admin
     .from('bookings')
     .update({ status: 'cancelled', cancellation_reason: 'approval_expired' })
     .eq('practitioner_id', practitionerId)
     .eq('status', 'pending_approval')
-    .eq('payment_status', 'unpaid')
     .lt('created_at', approvalCutoff)
 
   const cutoff = DateTime.utc().minus({ minutes: HOLD_EXPIRY_MINUTES }).toISO()

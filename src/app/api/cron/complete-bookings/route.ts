@@ -5,18 +5,27 @@ import { sendReviewRequestEmail } from '@/lib/email'
 import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
 import { reviewUrl } from '@/lib/siteUrl'
 import { getValidAccessToken, queryFreeBusy } from '@/lib/calendar'
+import { expireStaleHolds } from '@/app/[slug]/book/[sessionTypeId]/actions'
 
 // Hourly Vercel Cron. Three independent passes:
 //   (a) promote confirmed -> completed once end_datetime has passed (D7);
 //   (b) send the review-request email ~24h after end_datetime, decoupled from
 //       the completion moment (D9), idempotent via review_request_sent_at;
-//   (c) refresh cached calendar_busy windows from Google free/busy (D4).
+//   (c) refresh cached calendar_busy windows from Google free/busy (D4);
+//   (d) expire stale holds and approval holds (F-20) — previously this ran ONLY
+//       when someone loaded that practitioner's booking page, so a practitioner
+//       with no traffic kept blocked slots and uncancelled PaymentIntents
+//       indefinitely.
 // Each pass is independently failure-guarded — none throws into another.
 // Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` automatically when
 // CRON_SECRET is set in the project env.
 export const runtime = 'nodejs'
 
 const REVIEW_DELAY_HOURS = 24
+// Pre-filter only: picks which practitioners to hand to expireStaleHolds, which
+// applies the authoritative 30-min / 7-day cutoffs itself. Keep this <= the
+// shortest cutoff there so no expirable practitioner is missed.
+const HOLD_CANDIDATE_MINUTES = 30
 const BUSY_HORIZON_DAYS = 56 // matches the slot generator horizon
 
 // Pass (c): refresh each enabled integration's cached free/busy windows. Fully
@@ -191,10 +200,33 @@ export async function GET(req: NextRequest) {
     calendarSynced = -1 // signal the pass errored without throwing the request
   }
 
+  // (d) Hold expiry — isolated. Reuses the same helper the booking page calls
+  // (one implementation, so the PaymentIntent cleanup can't drift), driven over
+  // the practitioners that actually have expirable rows rather than all of them.
+  let holdsExpired = 0
+  try {
+    const { data: stale } = await admin
+      .from('bookings')
+      .select('practitioner_id')
+      .in('status', ['pending_payment', 'pending_approval'])
+      .lt('created_at', DateTime.utc().minus({ minutes: HOLD_CANDIDATE_MINUTES }).toISO() as string)
+    for (const id of new Set((stale ?? []).map((r) => r.practitioner_id as string))) {
+      try {
+        await expireStaleHolds(id)
+        holdsExpired += 1
+      } catch {
+        // One practitioner's expiry failure never affects the others.
+      }
+    }
+  } catch {
+    holdsExpired = -1 // signal the pass errored without throwing the request
+  }
+
   return NextResponse.json({
     ok: true,
     completed: promoted?.length ?? 0,
     reviewRequestsSent: requested,
     calendarSynced,
+    holdsExpiredFor: holdsExpired,
   })
 }
