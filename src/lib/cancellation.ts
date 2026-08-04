@@ -24,35 +24,39 @@ export type RefundComputation = {
   isFull: boolean
 }
 
+// The share of the paid amount the policy entitles the seeker to, as a fraction
+// of 1. Split out from computeRefund (F-21) because entitlement is knowable for
+// EVERY booking, while a dollar figure is knowable only when the platform took
+// the money. Offsite bookings have no amount_paid, so they need the fraction on
+// its own.
+export function refundFraction(policy: Policy, hoursBeforeStart: number): number {
+  // A cancellation at or after the session start never earns an automatic
+  // refund. This also stops a negative hoursBeforeStart from leaking into the
+  // tier comparisons below (C3).
+  if (hoursBeforeStart <= 0) return 0
+  switch (policy) {
+    case 'flexible':
+      return hoursBeforeStart >= 24 ? 1 : 0
+    case 'moderate':
+      return hoursBeforeStart >= 72 ? 1 : 0.5
+    case 'strict':
+      return hoursBeforeStart >= 24 * 7 ? 1 : 0
+    case 'none':
+    default:
+      return 0
+  }
+}
+
 // Pure tier math. hoursBeforeStart = hours between cancellation and session start.
 export function computeRefund(
   policy: Policy,
   amountPaid: number,
   hoursBeforeStart: number
 ): RefundComputation {
-  // A cancellation at or after the session start never earns an automatic
-  // refund. This also stops a negative hoursBeforeStart from leaking into the
-  // tier comparisons below (C3).
-  if (hoursBeforeStart <= 0) return { amount: 0, isFull: false }
-
-  const full = Math.round(amountPaid * 100) / 100
-  const half = Math.round(amountPaid * 50) / 100 // amountPaid * 0.5, cent-rounded
-  switch (policy) {
-    case 'flexible':
-      return hoursBeforeStart >= 24
-        ? { amount: full, isFull: true }
-        : { amount: 0, isFull: false }
-    case 'moderate':
-      return hoursBeforeStart >= 72
-        ? { amount: full, isFull: true }
-        : { amount: half, isFull: false }
-    case 'strict':
-      return hoursBeforeStart >= 24 * 7
-        ? { amount: full, isFull: true }
-        : { amount: 0, isFull: false }
-    case 'none':
-    default:
-      return { amount: 0, isFull: false }
+  const fraction = refundFraction(policy, hoursBeforeStart)
+  return {
+    amount: Math.round(amountPaid * fraction * 100) / 100,
+    isFull: fraction === 1 && amountPaid > 0,
   }
 }
 
@@ -77,6 +81,9 @@ export type CancelResult =
       isFull: boolean
       paymentStatus: 'paid' | 'unpaid' | 'refunded' | 'offsite'
       offsiteObligation: boolean // practitioner owes a manual refund
+      // Policy entitlement as a percentage, for offsite bookings where the
+      // platform never held the money and so cannot state a dollar figure.
+      offsiteRefundPercent: number
       whenLabel: string
       locationDisplay: string | null
       sessionName: string
@@ -95,6 +102,7 @@ type BookingContext = {
   amount_refunded: number | null
   stripe_payment_intent_id: string | null
   stripe_refund_id: string | null
+  cancelled_at: string | null
   start_datetime: string
   booked_format: 'virtual' | 'in_person'
   booked_location_display: string | null
@@ -116,7 +124,7 @@ async function loadBooking(bookingId: string): Promise<BookingContext | null> {
     .select(
       `id, practitioner_id, session_type_id, availability_block_id, status,
        payment_status, amount_paid, amount_refunded, stripe_payment_intent_id, stripe_refund_id,
-       start_datetime, booked_format, booked_location_display, seeker_id, guest_name, guest_email,
+       cancelled_at, start_datetime, booked_format, booked_location_display, seeker_id, guest_name, guest_email,
        session_types ( name, cancellation_policy ),
        practitioners ( full_name, cancellation_policy, stripe_account_id ),
        availability_blocks ( timezone )`
@@ -144,6 +152,7 @@ async function loadBooking(bookingId: string): Promise<BookingContext | null> {
     amount_refunded: data.amount_refunded,
     stripe_payment_intent_id: data.stripe_payment_intent_id,
     stripe_refund_id: data.stripe_refund_id,
+    cancelled_at: data.cancelled_at,
     start_datetime: data.start_datetime,
     booked_format: data.booked_format,
     booked_location_display: data.booked_location_display,
@@ -163,6 +172,16 @@ async function practitionerEmail(practitionerId: string): Promise<string | null>
   const admin = createAdminClient()
   const { data } = await admin.auth.admin.getUserById(practitionerId)
   return data.user?.email ?? null
+}
+
+// Recomputes the policy entitlement for an ALREADY-cancelled booking, reading
+// the stamped cancelled_at rather than the current clock so idempotent re-entry
+// reports the same percentage the original cancellation did.
+function recordedPercent(b: BookingContext, policy: Policy): number {
+  if (b.payment_status !== 'offsite' || !b.cancelled_at) return 0
+  const hours = DateTime.fromISO(b.start_datetime)
+    .diff(DateTime.fromISO(b.cancelled_at), 'hours').hours
+  return refundFraction(policy, hours) * 100
 }
 
 // Cancels a booking and resolves any refund. Idempotent: a booking already
@@ -196,7 +215,8 @@ export async function cancelBooking(args: {
       refundAmount: booking.amount_refunded ?? 0,
       isFull: (booking.amount_refunded ?? 0) > 0 && booking.amount_refunded === booking.amount_paid,
       paymentStatus: (booking.payment_status ?? 'unpaid') as 'paid' | 'unpaid' | 'refunded' | 'offsite',
-      offsiteObligation: booking.payment_status === 'offsite' && (booking.amount_refunded ?? 0) > 0,
+      offsiteObligation: recordedPercent(booking, policy) > 0,
+      offsiteRefundPercent: recordedPercent(booking, policy),
       whenLabel: whenLabel(booking.start_datetime, booking.timezone),
       locationDisplay: booking.booked_location_display,
       sessionName: booking.session_name,
@@ -226,7 +246,12 @@ export async function cancelBooking(args: {
     .diff(DateTime.fromISO(cancelledAt), 'hours').hours
 
   const amountPaid = booking.amount_paid ?? 0
+  const fraction = refundFraction(policy, hoursBeforeStart)
   const refund = computeRefund(policy, amountPaid, hoursBeforeStart)
+  // Entitlement as a percentage. Offsite bookings never carry an amount_paid
+  // (it is written only on the Stripe finalize path), so the dollar figure above
+  // is always 0 for them and cannot drive the obligation — F-21.
+  const offsiteRefundPercent = Math.round(fraction * 100)
 
   let stripeRefundId: string | null = booking.stripe_refund_id
   let newPaymentStatus = booking.payment_status ?? 'unpaid'
@@ -261,8 +286,10 @@ export async function cancelBooking(args: {
     } catch {
       return { ok: false, error: 'The refund could not be processed. Try again or contact support.' }
     }
-  } else if (isOffsite && refund.amount > 0) {
+  } else if (isOffsite && fraction > 0) {
     // Stripe never processed this money; the practitioner owes it manually.
+    // Keyed off the POLICY, not a dollar amount: the platform never held these
+    // funds and cannot assert what changed hands (F-21).
     offsiteObligation = true
     // payment_status stays 'offsite'.
   }
@@ -274,7 +301,11 @@ export async function cancelBooking(args: {
       cancelled_at: cancelledAt,
       cancelled_by: cancelledBy,
       cancellation_reason: reason,
-      amount_refunded: refund.amount,
+      // Stripe money ONLY (F-22). An offsite obligation is not a refund the
+      // platform processed, so recording it here would make every revenue query
+      // overcount. The obligation lives on the emails and is derivable from
+      // policy + cancelled_at.
+      amount_refunded: onPlatformPaid ? refund.amount : 0,
       stripe_refund_id: stripeRefundId,
       payment_status: newPaymentStatus,
       updated_at: cancelledAt,
@@ -298,7 +329,8 @@ export async function cancelBooking(args: {
       refundAmount: fresh?.amount_refunded ?? 0,
       isFull: (fresh?.amount_refunded ?? 0) > 0 && fresh?.amount_refunded === fresh?.amount_paid,
       paymentStatus: (fresh?.payment_status ?? 'unpaid') as 'paid' | 'unpaid' | 'refunded' | 'offsite',
-      offsiteObligation: fresh?.payment_status === 'offsite' && (fresh?.amount_refunded ?? 0) > 0,
+      offsiteObligation: fresh ? recordedPercent(fresh, policy) > 0 : false,
+      offsiteRefundPercent: fresh ? recordedPercent(fresh, policy) : 0,
       whenLabel: whenLabel(booking.start_datetime, booking.timezone),
       locationDisplay: booking.booked_location_display,
       sessionName: booking.session_name,
@@ -326,6 +358,7 @@ export async function cancelBooking(args: {
     refundAmount: refund.amount,
     isFullRefund: refund.isFull,
     offsiteObligation,
+    offsiteRefundPercent,
     paymentStatus: newPaymentStatus as 'paid' | 'unpaid' | 'refunded' | 'offsite',
   })
 
@@ -337,6 +370,7 @@ export async function cancelBooking(args: {
     isFull: refund.isFull,
     paymentStatus: newPaymentStatus as 'paid' | 'unpaid' | 'refunded' | 'offsite',
     offsiteObligation,
+    offsiteRefundPercent,
     whenLabel: when,
     locationDisplay: booking.booked_location_display,
     sessionName: booking.session_name,

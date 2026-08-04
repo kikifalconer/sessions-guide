@@ -181,6 +181,10 @@ export type CancellationEmailInput = {
   refundAmount: number // dollars
   isFullRefund: boolean
   offsiteObligation: boolean // practitioner owes a manual refund
+  // Policy entitlement as a percentage. Used INSTEAD of a dollar figure for
+  // offsite bookings: the platform never held that money and cannot state what
+  // actually changed hands (F-21).
+  offsiteRefundPercent: number
   paymentStatus: 'paid' | 'unpaid' | 'refunded' | 'offsite'
 }
 
@@ -191,8 +195,9 @@ function seekerRefundLine(input: CancellationEmailInput): string | null {
     const kind = input.isFullRefund ? 'A full refund' : 'A partial refund'
     return `${kind} of $${input.refundAmount.toFixed(2)} is on its way. Refunds usually take 5 to 10 business days to appear.`
   }
-  if (input.offsiteObligation && input.refundAmount > 0) {
-    return `A refund of $${input.refundAmount.toFixed(2)} is due from your practitioner, who arranges payment directly with you.`
+  if (input.offsiteObligation) {
+    const share = input.offsiteRefundPercent >= 100 ? 'a full refund' : `a ${input.offsiteRefundPercent}% refund`
+    return `You paid your practitioner directly, so this refund is theirs to issue. Their cancellation policy entitles you to ${share}. They have been notified.`
   }
   if (input.paymentStatus === 'paid' && input.refundAmount === 0) {
     return 'No refund applies under the cancellation policy for this session.'
@@ -223,10 +228,14 @@ function cancellationPractitionerBody(input: CancellationEmailInput): string {
   lines.push(`Session: ${input.sessionName}`)
   lines.push(`Seeker: ${seekerLine(input.seekerName, input.seekerEmail)}`)
   lines.push(`When: ${input.whenLabel}`)
-  if (input.offsiteObligation && input.refundAmount > 0) {
+  if (input.offsiteObligation) {
+    const share =
+      input.offsiteRefundPercent >= 100
+        ? 'a full refund'
+        : `a ${input.offsiteRefundPercent}% refund`
     lines.push('')
     lines.push(
-      `A refund of $${input.refundAmount.toFixed(2)} is owed to the seeker. This payment was handled offsite, so the refund is yours to issue directly.`
+      `This payment was handled offsite, so any refund is yours to issue directly. Your cancellation policy entitles the seeker to ${share} of what they paid you.`
     )
   } else if (input.paymentStatus === 'refunded' && input.refundAmount > 0) {
     lines.push('')
