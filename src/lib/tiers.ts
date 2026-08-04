@@ -7,6 +7,27 @@ export type Tier = (typeof TIERS)[number]
 
 export type BillingCycle = 'monthly' | 'annual'
 
+// Subscription statuses that grant an entitlement. Stripe's other statuses
+// (canceled, unpaid, incomplete, incomplete_expired, paused) do not. Shared so
+// the webhook, the redemption guard, and the DB index all agree on one
+// definition of "active".
+export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing', 'past_due'] as const
+
+const TIER_RANK: Record<Tier, number> = { free: 0, elevated: 1, alchemist: 2 }
+
+// Highest tier among a set of subscription rows; 'free' when there are none.
+// Used instead of assuming 'free' when ONE subscription ends (F-25) — a
+// practitioner may hold another that is still active.
+export function highestTier(rows: { tier: string }[]): Tier {
+  let best: Tier = 'free'
+  for (const r of rows) {
+    const t = r.tier as Tier
+    if (TIER_RANK[t] !== undefined && TIER_RANK[t] > TIER_RANK[best]) best = t
+  }
+  return best
+}
+
+
 // 'free' has no Stripe price — it is the absence of a paid subscription.
 export type PaidTier = 'elevated' | 'alchemist'
 

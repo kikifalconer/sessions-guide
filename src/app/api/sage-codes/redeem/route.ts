@@ -3,7 +3,7 @@ import { DateTime } from 'luxon'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStripe, getOrCreateStripeCustomer } from '@/lib/stripeCustomer'
-import { tierToPriceId } from '@/lib/tiers'
+import { tierToPriceId, ACTIVE_SUBSCRIPTION_STATUSES } from '@/lib/tiers'
 
 // Sage code redemption (D25). Grants one free year of Elevated via a Stripe
 // subscription with a 365-day trial and NO payment method collected; Stripe
@@ -47,6 +47,21 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const nowIso = DateTime.utc().toISO()
 
+  // One active subscription per practitioner (F-23). Without this a
+  // practitioner could redeem several Sage codes, each creating its own Stripe
+  // subscription with its own 365-day trial — and be billed once per
+  // subscription the moment they add a card. Checked before the claim so a
+  // refused redemption never consumes the code.
+  const { data: activeSub } = await admin
+    .from('subscriptions')
+    .select('id')
+    .eq('practitioner_id', user.id)
+    .in('status', [...ACTIVE_SUBSCRIPTION_STATUSES])
+    .maybeSingle()
+  if (activeSub) {
+    return NextResponse.json({ error: 'already_subscribed' }, { status: 409 })
+  }
+
   // Friendly-error probe: distinguishes not_found / already_redeemed / expired.
   const { data: existing } = await admin
     .from('sage_codes')
@@ -81,6 +96,10 @@ export async function POST(req: NextRequest) {
 
   // Create the trial subscription. On ANY failure, release the claim so the code
   // can be used again, then surface the error.
+  // Held outside the try so the compensating path can undo a Stripe object that
+  // was already created before a later step failed (F-24).
+  let createdSubscriptionId: string | null = null
+
   try {
     const priceId = tierToPriceId('elevated', 'monthly')
     const customerId = await getOrCreateStripeCustomer(user.id)
@@ -94,6 +113,7 @@ export async function POST(req: NextRequest) {
       trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
       metadata: { practitioner_id: user.id, sage_code_id: claimedId },
     })
+    createdSubscriptionId = sub.id
 
     // Reflect the trial immediately (webhook reconciles idempotently later).
     const item = sub.items.data[0]
@@ -124,6 +144,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[sage-redeem] Stripe/subscription write failed; releasing claim', code, err)
+
+    // Cancel a subscription that was already created before the failure (F-24).
+    // Releasing the code without this leaves a live 365-day trial on the
+    // customer that no DB row knows about, and the next redemption of the
+    // now-reusable code stacks a second one on top.
+    if (createdSubscriptionId) {
+      try {
+        await getStripe().subscriptions.cancel(createdSubscriptionId)
+      } catch (cancelErr) {
+        console.error(
+          '[sage-redeem] LOUD: orphaned Stripe subscription could not be cancelled',
+          { subscription: createdSubscriptionId, practitioner: user.id },
+          cancelErr
+        )
+      }
+      await admin.from('subscriptions').delete().eq('stripe_subscription_id', createdSubscriptionId)
+    }
+
     // Compensating update: un-redeem so the code is not consumed by a failed run.
     await admin
       .from('sage_codes')

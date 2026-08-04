@@ -4,7 +4,7 @@ import { DateTime } from 'luxon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { reconcileRefundFromEvent } from '@/lib/cancellation'
 import { finalizeBooking } from '@/app/[slug]/book/[sessionTypeId]/actions'
-import { priceIdToTier } from '@/lib/tiers'
+import { priceIdToTier, highestTier, ACTIVE_SUBSCRIPTION_STATUSES } from '@/lib/tiers'
 
 // Stripe webhook. Foundational for Phase 4 — first consumer of
 // STRIPE_WEBHOOK_SECRET. Every event is signature-verified, then deduped via
@@ -244,9 +244,21 @@ async function handleSubscriptionDeleted(
     .from('subscriptions')
     .update({ status: 'canceled', updated_at: nowIso })
     .eq('id', row.id)
+
+  // Recompute from what is LEFT rather than assuming 'free' (F-25). A
+  // practitioner may hold another active subscription — an upgrade that
+  // replaced rather than modified, or a second redemption — and hard-setting
+  // 'free' here would strip a tier they are still paying for. The status
+  // update above already excluded this row.
+  const { data: remaining } = await admin
+    .from('subscriptions')
+    .select('tier')
+    .eq('practitioner_id', row.practitioner_id)
+    .in('status', [...ACTIVE_SUBSCRIPTION_STATUSES])
+
   await admin
     .from('practitioners')
-    .update({ subscription_tier: 'free' })
+    .update({ subscription_tier: highestTier(remaining ?? []) })
     .eq('id', row.practitioner_id)
 }
 
