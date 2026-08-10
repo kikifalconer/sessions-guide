@@ -8,6 +8,7 @@ import AboutSection from './AboutSection'
 import SessionsSection, { type SessionCard } from './SessionsSection'
 import { detectPlatform } from '@/lib/links'
 import { JsonLd, practitionerJsonLd, type SessionTypeSeo } from '@/lib/seo/structuredData'
+import { isFixture } from '@/lib/indexable'
 
 const PSYCHEDELIC_DISCLAIMER =
   'Psychedelic journey facilitation may be subject to local laws and regulations. Practitioners and clients are solely responsible for ensuring compliance with the laws of their jurisdiction.'
@@ -96,6 +97,12 @@ export async function generateMetadata({
   // Never leak an unpublished practitioner's name/tagline via metadata: the page
   // body 404s for non-owners, so the <head> must not identify them either (H2).
   if (!profile || !profile.is_published) return { title: 'sessions.guide' }
+  if (isFixture(slug)) {
+    return {
+      title: 'sessions.guide',
+      robots: { index: false, follow: false },
+    }
+  }
   const primaryModality = [...profile.practitioner_modalities]
     .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))[0]?.modalities?.name
   // Description: tagline, falling back to a truncated bio (no em dashes here).
@@ -224,7 +231,7 @@ export default async function PractitionerProfilePage({
 
   return (
     <main className="min-h-screen bg-bg">
-      {profile.is_published && <JsonLd data={practitionerSeo} />}
+     {profile.is_published && !isFixture(slug) && <JsonLd data={practitionerSeo} />}
       {!profile.is_published && isOwner && (
         <div className="bg-olive px-6 py-3 text-center">
           <p className="caption text-light">

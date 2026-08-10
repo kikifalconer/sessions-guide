@@ -7,6 +7,7 @@ import type { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { derivableCities } from '@/lib/discovery'
 import { getSiteUrl } from '@/lib/siteUrl'
+import { isFixture } from '@/lib/indexable'
 
 export const revalidate = 3600 // rebuild at most hourly
 
@@ -58,7 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   }
 
-  for (const p of practitioners ?? []) {
+  for (const p of (practitioners ?? []).filter((p) => !isFixture(p.slug))) {
     entries.push({
       url: `${SITE_URL}/${p.slug}`,
       lastModified: p.updated_at ? new Date(p.updated_at) : undefined,

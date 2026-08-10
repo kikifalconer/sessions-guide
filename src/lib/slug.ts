@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { RESERVED_SLUG_PREFIX } from '@/lib/indexable'
 
 // D12 reserved-segment guard: a practitioner slug must never equal a top-level
 // route segment, or that practitioner's profile (/[slug]) would be shadowed by
@@ -63,7 +64,7 @@ export async function generateUniqueSlug(
   // The bare slug is unavailable if another practitioner has it OR it is a
   // reserved top-level segment. Suffixed forms (e.g. 'search-2') are never
   // reserved, so only the base needs the reserved check.
-  if (!taken.has(base) && !RESERVED_SLUGS.has(base)) return base
+if (!taken.has(base) && !RESERVED_SLUGS.has(base) && !base.startsWith(RESERVED_SLUG_PREFIX)) return base
 
   let n = 2
   while (taken.has(`${base}-${n}`)) n++
