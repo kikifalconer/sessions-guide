@@ -1,7 +1,7 @@
 import SiteHeader from '@/components/site-header'
 
 export const metadata = {
-  title: 'Privacy | Sessions Guide',
+  title: 'privacy | sessions.guide',
 }
 
 export default function PrivacyPage() {

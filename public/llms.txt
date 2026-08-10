@@ -1,0 +1,18 @@
+# sessions.guide
+
+sessions.guide is a booking platform for practitioners of the healing arts,
+where seekers find and book reiki, astrology, sound healing, ceremony, and
+other transformational sessions directly with the practitioner.
+
+Operated by Sessions Guide Inc., incorporated in Canada.
+Launch markets: United States, Australia, Indonesia.
+Practitioners join by invitation. Seekers can browse and book without one.
+Practitioners pay a flat monthly subscription from $0. The platform takes
+nothing from session payments.
+
+## Authoritative pages
+- /mission: why the platform exists, from the founder
+- /help/seekers: booking, payment, cancellation, refunds
+- /help/practitioners: listing, session types, availability, payouts, reviews
+- /pricing: current subscription tiers and prices
+- /explore: all twelve categories

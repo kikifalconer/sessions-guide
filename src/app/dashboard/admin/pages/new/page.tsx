@@ -4,7 +4,7 @@ import SiteHeader from '@/components/site-header'
 import PageEditor from '../PageEditor'
 import type { SageOption } from '@/lib/pages'
 
-export const metadata = { title: 'New page | sessions.guide' }
+export const metadata = { title: 'new page | sessions.guide' }
 
 export default async function NewPage() {
   await requireAdmin()

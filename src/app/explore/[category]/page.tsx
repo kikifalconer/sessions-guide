@@ -66,18 +66,18 @@ const PSYCHEDELIC_DISCLAIMER =
 // full list lives in the description. Falls back cleanly when no modalities fit.
 function categoryTitle(categoryName: string, modalityNames: string[]): string {
   const suffix = ' | sessions.guide'
-  const prefix = `${categoryName} Practitioners`
+  const prefix = `${categoryName.toLowerCase()} practitioners`
   if (modalityNames.length === 0) return `${prefix}${suffix}`
   // Always include the first modality (the keyword whole point), then add more
   // while the title stays near ~60 chars. Full list lives in the description.
-  const budget = 60 - prefix.length - 3 - suffix.length // 3 for " - "
-  let list = modalityNames[0]
+  const budget = 60 - prefix.length - 2 - suffix.length // 2 for ": "
+  let list = modalityNames[0].toLowerCase()
   for (const name of modalityNames.slice(1)) {
-    const next = `${list}, ${name}`
+    const next = `${list}, ${name.toLowerCase()}`
     if (next.length > budget) break
     list = next
   }
-  return `${prefix} - ${list}${suffix}`
+  return `${prefix}: ${list}${suffix}`
 }
 
 export async function generateMetadata({

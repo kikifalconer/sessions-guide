@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import SiteHeader from '@/components/site-header'
 import { pagePublicPath, type PageType, type PageStatus } from '@/lib/pages'
 
-export const metadata = { title: 'Pages | sessions.guide' }
+export const metadata = { title: 'pages | sessions.guide' }
 
 function formatDate(iso: string): string {
   const d = new Date(iso)

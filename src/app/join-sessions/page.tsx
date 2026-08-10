@@ -1,10 +1,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
+export const metadata = buildMetadata({
+  concept: 'list your sessions',
+  description: 'TODO',
+  path: '/join-sessions',
+})
+import { buildMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Join Sessions | Sessions Guide',
-}
 
 const BENEFITS: { title: string; body: string }[] = [
   {

@@ -50,9 +50,30 @@ We believe. We do not preach.
 
 **Use:** guide, practitioner, healing, transformation, modality, sacred, intentional, trusted, journey, discerning, seeker
 
-**Avoid:** starseed, love & light, woo-woo, vibe, manifest, guru, energy worker, healer (as generic catch-all)
+**Avoid:** starseed, love & light, woo-woo, vibe, manifest, guru, energy worker
 
 **Insider terms to use naturally:** seekers (for the audience), session (not appointment or booking), modality (not service or treatment), availability block (internal/dashboard only, not seeker-facing)
+
+---
+## Roles & Terminology (updated July 2026)
+
+| Term | Meaning | Rules |
+|---|---|---|
+| Practitioner | Provider listed on the platform | Never call a practitioner a "guide" |
+| Seeker | A person browsing or booking | Internal + copy term. In navigation and headers, prefer role-neutral task language over the label (see below) |
+| Guide | Invite-only community curator (formerly "Sage") | "Guide" capitalized, noun only, reserved for this role. "Guides" replaces "Sages" in all display copy |
+| Client | A practitioner's client | Practitioner-dashboard contexts only ("your clients"). Never platform-wide |
+
+**"Guide" usage:** As a noun, only ever the curator role. As a verb, sparingly, and never
+in a way that implies practitioners are Guides ("she guides breathwork" — avoid;
+"let reviews guide you" — acceptable, rare).
+
+**Role-neutral surface labels:** In nav, help, and section headers, describe the task,
+not the audience. "Help finding & booking sessions" not "For seekers."
+"List your practice" not "For practitioners." The role words are for prose, not chrome.
+
+**Code freeze:** `sages` table, `seeker_id`, `seeker_token`, and all code identifiers
+keep their existing names. This is a display-language change only.
 
 ---
 
@@ -62,7 +83,7 @@ We believe. We do not preach.
 
 **For practitioners:** Speak to their expertise and integrity. Peer-to-peer, not patron-to-service. They are investing in a platform that holds the same standards they do.
 
-**For Sages:** Recognize them as trusted voices, not influencers or ambassadors. They endorse because they genuinely believe — the platform never makes this feel transactional.
+**For Guides:** Recognize them as trusted voices, not influencers or ambassadors. They endorse because they genuinely believe — the platform never makes this feel transactional.
 
 **In error states / empty states:** Calm and directional. Not apologetic. Not vague. Tell people what to do next.
 
@@ -91,6 +112,35 @@ But we also do not explain or defend it. We speak about these modalities with th
 We believe. We do not preach.
 
 ---
+
+## Trust Is the Product
+
+Trust runs both directions and speaks in the same calm register for both.
+
+**Community-reviewed is the spine.** Quality on sessions.guide is governed by
+reviews from people who did the work, amplified by Guides. Never use
+vetting-adjacent language ("verified," "screened," "approved practitioners").
+The community reviews; the platform does not certify.
+
+**For seekers, trust is transparency.** City-only locations before booking.
+Cancellation terms in plain language before commit. No urgency, no countdowns,
+no pressure. Real reviews, tied to real bookings. What to expect, written by
+the practitioner, before you book.
+
+**For practitioners, trust is control.** Approval mode is their door. Private
+client notes are theirs alone. Their exact location stays private until a
+booking is confirmed. Speak to this as respect for their practice, never as
+"protection from" seekers.
+
+**Voice rules for trust copy:**
+- State the safeguard plainly, once. Never sell it.
+- No security theater ("bank-level," "100% safe," shield iconography energy)
+- Never frame either side as a risk to the other
+- Zero-reviews states are "early," never "unproven": lean on Guide
+  recommendations, external links, and the practitioner's own words
+
+---
+
 
 ## UI Copy Conventions
 

@@ -534,3 +534,39 @@ On subscription cancellation or trial expiry, tier → `free`. Session type rows
 Admin-authored content pages built from an ordered list of typed blocks stored as jsonb. Two public route trees share one block renderer: editorial guides at `/guides/[slug]` and Sage pages at `/sages/[slug]`. Block types this pass: `heading`, `paragraph`, `image`, `image_text` (content shapes in schema.md / `src/lib/pages.ts`). Tables `pages` + `page_blocks` (migration 0013), RLS on with no policies (service-role only, per 0010). Draft/published: only `status='published'` pages render publicly, appear in the sitemap, or emit JSON-LD (Article for editorial, ProfilePage for sage), mirroring the practitioner `is_published` gate and the H2 no-metadata-leak rule. Sage pages additionally render the Sage's `sage_recommendations` (by `sort_order`, published practitioners only) via the shared `PractitionerCard`. Images use the existing unsigned Cloudinary upload (`uploadToCloudinary`), never Supabase Storage.
 
 Editing is **admin-only via an interim env gate**: authenticated user whose `user.id === process.env.ADMIN_USER_ID`. No admin table or role flag this pass. The gate is FAIL-CLOSED (an unset `ADMIN_USER_ID` denies everyone). Every admin route and every server action re-checks it. See TD11.
+
+---
+
+## Terminology — Sage → Guide, Seeker retained (July 2026)
+
+**Decision:** The curator role is renamed "Guide" in all display copy. "Seeker"
+is retained as the term for the booking-side audience. "Client" is reserved for
+practitioner-dashboard contexts. Navigation and headers use role-neutral task
+language ("Help finding & booking sessions") rather than audience labels.
+
+**Rationale:** "Guide" aligns the curator role with the sessions.guide name.
+"Seeker" survives because "client" is practitioner-relative and collides with
+the `clients` table; ambiguity is resolved at the surface-copy level instead.
+
+**Implications:** Display copy only. Schema and code identifiers are frozen:
+`sages`, `sage_recommendations`, `seeker_id`, `seeker_token`, `clients` all
+keep their names. Do not rename code to match copy. "Guide" is noun-only for
+the curator role; practitioners are never called guides.
+
+---
+
+## No Seeker-Facing Reviews or Flags (July 2026)
+
+**Decision:** Practitioners cannot review, rate, or flag seekers. No shared
+flag system, no cross-practitioner visibility of seeker behavior.
+
+**Rationale:** Seekers arrive in vulnerable contexts; rating their conduct is
+brand-fatal and chills honest reviews (retaliation dynamics). A shared flag
+list is a de facto blacklist with defamation/privacy exposure across four
+jurisdictions.
+
+**Implications:** Practitioner protection lives in existing mechanisms:
+`pending_approval` confirmation mode (their screen), private `clients.notes`,
+and future per-practitioner no-show counts on the client record (visible only
+to that practitioner). Platform-internal abuse signals, if ever built, are
+ops-only and never surfaced.

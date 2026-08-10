@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 
-export const metadata = { title: 'Help | sessions.guide' }
+export const metadata = { title: 'help | sessions.guide' }
 
 const LINK =
   'label block border border-border px-6 py-8 text-olive hover:border-olive'

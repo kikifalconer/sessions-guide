@@ -2,7 +2,7 @@ import SiteHeader from '@/components/site-header'
 import ContactForm from '@/components/contact-form'
 
 export const metadata = {
-  title: 'Contact | Sessions Guide',
+  title: 'contact | sessions.guide',
 }
 
 export default function ContactPage() {

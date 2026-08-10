@@ -9,7 +9,7 @@ import {
   type SearchFormat,
 } from '@/lib/discovery'
 
-export const metadata = { title: 'Search | sessions.guide' }
+export const metadata = { title: 'search | sessions.guide' }
 
 const PSYCHEDELIC_DISCLAIMER =
   'Psychedelic journey facilitation may be subject to local laws and regulations. Practitioners and clients are solely responsible for ensuring compliance with the laws of their jurisdiction.'

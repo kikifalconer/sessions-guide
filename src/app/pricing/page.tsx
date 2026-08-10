@@ -2,7 +2,7 @@ import Link from 'next/link'
 import SiteHeader from '@/components/site-header'
 
 export const metadata = {
-  title: 'Pricing | Sessions Guide',
+  title: 'pricing | sessions.guide',
 }
 
 const TIERS: {

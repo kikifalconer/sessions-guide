@@ -5,7 +5,7 @@ import SiteHeader from '@/components/site-header'
 import BillingClient from './BillingClient'
 import type { Tier } from '@/lib/tiers'
 
-export const metadata = { title: 'Billing | sessions.guide' }
+export const metadata = { title: 'billing | sessions.guide' }
 
 // Dashboard billing surface (D24). Server resolves the practitioner's tier and
 // most recent subscription row (service-role read); the interactive surface is

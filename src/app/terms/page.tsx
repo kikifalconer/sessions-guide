@@ -1,7 +1,7 @@
 import SiteHeader from '@/components/site-header'
 
 export const metadata = {
-  title: 'Terms | Sessions Guide',
+  title: 'terms | sessions.guide',
 }
 
 export default function TermsPage() {

@@ -4,10 +4,14 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { INVITE_COOKIE, isValidInviteCode } from '@/lib/invite'
 import JoinFlow, { type ModalityOption, type PractitionerPrefill } from './JoinFlow'
+import { buildMetadata } from '@/lib/metadata'
 
-export const metadata = {
-  title: 'Join sessions.guide',
-}
+export const metadata = buildMetadata({
+  concept: 'join',
+  description: 'Practitioner invite flow.',
+  path: '/join',
+  noindex: true,
+})
 
 export default async function JoinPage() {
   const supabase = await createClient()

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { resolveAuthDestination } from '@/lib/authDestination'
 import LoginForm from './LoginForm'
 
-export const metadata = { title: 'Sign in | sessions.guide' }
+export const metadata = { title: 'sign in | sessions.guide' }
 
 // Single sign-in entry point (D20 / Amendment 1). Primary: seeker magic link.
 // Secondary: Google for returning practitioners. /join stays signup-only.

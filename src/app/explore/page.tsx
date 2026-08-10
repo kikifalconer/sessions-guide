@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import SiteHeader from '@/components/site-header'
 import { categoryPath } from '@/lib/routes'
 
-export const metadata = { title: 'Explore | sessions.guide' }
+export const metadata = { title: 'browse sessions | sessions.guide' }
 
 // Discovery landing. Mount-portable: it lives at /explore now and is destined
 // to become / when the holding page retires. Category links go through

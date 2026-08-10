@@ -7,7 +7,7 @@ import SiteHeader from '@/components/site-header'
 import AccountShell from './AccountShell'
 
 export const metadata = {
-  title: 'Your account | sessions.guide',
+  title: 'your account | sessions.guide',
 }
 
 // Seeker dashboard (D20). Server-side auth guard, same shape as /dashboard.

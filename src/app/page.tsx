@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { buildMetadata } from '@/lib/metadata'
 
 // Landing page. Header-free by design (the root layout injects no header); the
 // full-width wordmark is the top of the page. All colors/fonts come from CSS

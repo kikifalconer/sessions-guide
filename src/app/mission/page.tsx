@@ -2,7 +2,7 @@ import Image from 'next/image'
 import SiteHeader from '@/components/site-header'
 
 export const metadata = {
-  title: 'The Mission | Sessions Guide',
+  title: 'the mission | sessions.guide',
 }
 
 export default function MissionPage() {

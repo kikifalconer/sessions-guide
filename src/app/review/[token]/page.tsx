@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
 import ReviewForm from './ReviewForm'
 
-export const metadata = { title: 'Leave a review | sessions.guide' }
+export const metadata = { title: 'leave a review | sessions.guide' }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (

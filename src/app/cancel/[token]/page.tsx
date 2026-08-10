@@ -5,7 +5,7 @@ import { resolveCancellationPolicy, CANCELLATION_POLICY_COPY } from '@/lib/booki
 import { computeRefund } from '@/lib/cancellation'
 import CancelConfirm from './CancelConfirm'
 
-export const metadata = { title: 'Cancel your session | sessions.guide' }
+export const metadata = { title: 'cancel your session | sessions.guide' }
 
 function whenLabel(startUtc: string, zone: string): string {
   return (

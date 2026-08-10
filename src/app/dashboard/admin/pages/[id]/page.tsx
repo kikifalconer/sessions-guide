@@ -5,7 +5,7 @@ import SiteHeader from '@/components/site-header'
 import PageEditor from '../PageEditor'
 import type { PageBlock, PageRecord, SageOption } from '@/lib/pages'
 
-export const metadata = { title: 'Edit page | sessions.guide' }
+export const metadata = { title: 'edit page | sessions.guide' }
 
 export default async function EditPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin()

@@ -103,7 +103,7 @@ export async function generateMetadata({
     profile.tagline ?? (profile.bio ? `${profile.bio.slice(0, 155).trimEnd()}` : undefined)
   return {
     title: primaryModality
-      ? `${profile.full_name} - ${primaryModality} | sessions.guide`
+  ? `${profile.full_name}, ${primaryModality} | sessions.guide`
       : `${profile.full_name} | sessions.guide`,
     description,
   }
