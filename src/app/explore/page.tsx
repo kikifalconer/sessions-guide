@@ -2,8 +2,13 @@ import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
 import SiteHeader from '@/components/site-header'
 import { categoryPath } from '@/lib/routes'
+import { buildMetadata } from '@/lib/metadata'
 
-export const metadata = { title: 'browse sessions | sessions.guide' }
+export const metadata = buildMetadata({
+  concept: 'browse sessions',
+  description: 'Browse healing and transformational practitioners by category. Book virtual or in-person sessions in reiki, astrology, breathwork and more.',
+  path: '/explore',
+})
 
 // Discovery landing. Mount-portable: it lives at /explore now and is destined
 // to become / when the holding page retires. Category links go through
