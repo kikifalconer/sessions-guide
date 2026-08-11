@@ -57,6 +57,8 @@ export default async function SearchPage({
           <span>SEARCH</span>
         </nav>
 
+        <h1 className="mb-2">Search sessions</h1>
+
         <h2 className="mb-8">Search</h2>
 
         {/* URL-driven filters: a native GET form (shareable links, works without

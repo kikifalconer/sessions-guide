@@ -161,7 +161,7 @@ export default function LandingPage() {
           </div>
 
           <div>
-            <h2 className="mb-10">Built from the inside.</h2>
+            <h1 className="mb-10">Built from the inside.</h1>
             <p className="mb-6 max-w-[54ch] text-dark">
               As a cofounder of Conscious City Guide, I spent a decade working with
               thousands of practitioners, healers, teachers, and guides. And though
@@ -198,9 +198,9 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-black/35" />
           <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
             {/* Inline style so it wins over the global h1 olive color. */}
-            <h1 className="max-w-[16ch]" style={{ color: 'var(--color-light)' }}>
+            <h2 className="max-w-[16ch]" style={{ color: 'var(--color-light)' }}>
               {"Making Lightworkers' Work Lighter"}
-            </h1>
+            </h2>
             <Link href="/join-sessions" className="btn-primary mt-10">
               LEARN MORE
             </Link>

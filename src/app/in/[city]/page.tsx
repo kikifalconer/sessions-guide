@@ -61,6 +61,8 @@ export default async function CityPage({
           <span>{displayCity}</span>
         </nav>
 
+        <h1 className="mb-2">Sessions in {displayCity}</h1>
+
         <h2 className="mb-6">{displayCity}</h2>
 
         {/* In-person-only toggle (D15). All = in-person within this area plus

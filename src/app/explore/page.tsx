@@ -26,7 +26,7 @@ export default async function ExplorePage() {
       <SiteHeader />
 
       <div className="mx-auto w-full max-w-[1200px] px-6 py-16">
-        <h2 className="mb-2">Find a practitioner who actually gets it.</h2>
+        <h1 className="mb-2">Find a practitioner who actually gets it.</h1>
         <p className="mb-10 max-w-[60ch]">
           Browse the transformational and healing arts by category, or search by modality.
         </p>
