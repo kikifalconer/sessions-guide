@@ -47,9 +47,21 @@ export function organizationJsonLd() {
     '@type': 'Organization',
     '@id': `${SITE_URL}/#organization`,
     name: SITE_NAME,
+    legalName: 'Sessions Guide Inc.',
     url: SITE_URL,
     description:
       'A marketplace for booking sessions with transformational wellness practitioners across every modality, from reiki and astrology to breathwork, doula support, and psychedelic facilitation.',
+    founder: {
+      '@type': 'Person',
+      name: 'Kiki Falconer',
+    },
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Vancouver',
+      addressRegion: 'BC',
+      addressCountry: 'CA',
+    },
+    sameAs: ['https://www.instagram.com/sessionsguide'],
   }
 }
 
