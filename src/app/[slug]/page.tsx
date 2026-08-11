@@ -257,7 +257,12 @@ export default async function PractitionerProfilePage({
         practitionerSlug={profile.slug}
       />
 
-      <AboutSection bio={profile.bio} photoUrl={profile.photo_url} practitionerSlug={profile.slug} />
+      <AboutSection
+        bio={profile.bio}
+        photoUrl={profile.photo_url}
+        practitionerName={profile.full_name}
+        practitionerSlug={profile.slug}
+      />
 
       <SessionsSection
         practitionerName={profile.full_name}

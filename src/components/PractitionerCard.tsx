@@ -20,7 +20,7 @@ export default function PractitionerCard({ practitioner }: { practitioner: Pract
         {p.photoUrl && (
           <Image
             src={faceCrop(p.photoUrl, 600)}
-            alt=""
+            alt={p.fullName}
             fill
             sizes="(max-width: 768px) 100vw, 360px"
             className="object-cover"

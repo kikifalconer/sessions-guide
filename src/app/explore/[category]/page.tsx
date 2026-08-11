@@ -164,7 +164,14 @@ export default async function CategoryPage({
 
       {/* Full-width hero */}
       <div className="relative left-1/2 right-1/2 -mx-[50vw] h-[360px] w-screen overflow-hidden">
-        <Image src={hero.image} alt="" fill priority sizes="100vw" className="object-cover" />
+        <Image
+          src={hero.image}
+          alt={`${cat.name} practitioners`}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-[1] flex h-full items-center justify-center px-6 text-center">
           <h1 style={{ color: 'var(--color-light)' }}>{cat.name}</h1>

@@ -16,7 +16,7 @@ export default function ProfileHero({
         {bannerUrl && (
           <Image
             src={bannerCrop(bannerUrl, 1600, 600)}
-            alt=""
+            alt={`${name} banner`}
             fill
             priority
             sizes="100vw"

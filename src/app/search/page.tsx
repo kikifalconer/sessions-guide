@@ -8,8 +8,13 @@ import {
   derivableCities,
   type SearchFormat,
 } from '@/lib/discovery'
+import { buildMetadata } from '@/lib/metadata'
 
-export const metadata = { title: 'search | sessions.guide' }
+export const metadata = buildMetadata({
+  concept: 'search',
+  description: 'Search healing and transformational practitioners by modality, city, and session format. Virtual sessions available everywhere.',
+  path: '/search',
+})
 
 const PSYCHEDELIC_DISCLAIMER =
   'Psychedelic journey facilitation may be subject to local laws and regulations. Practitioners and clients are solely responsible for ensuring compliance with the laws of their jurisdiction.'

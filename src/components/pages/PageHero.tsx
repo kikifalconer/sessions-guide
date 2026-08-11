@@ -17,7 +17,7 @@ export default function PageHero({
         {imageUrl && (
           <Image
             src={bannerCrop(imageUrl, 1600, 600)}
-            alt=""
+            alt={title}
             fill
             priority
             sizes="100vw"

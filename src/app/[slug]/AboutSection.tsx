@@ -5,10 +5,12 @@ import { faceCrop } from '@/lib/cloudinary'
 export default function AboutSection({
   bio,
   photoUrl,
+  practitionerName,
   practitionerSlug,
 }: {
   bio: string | null
   photoUrl: string | null
+  practitionerName: string
   practitionerSlug: string
 }) {
   return (
@@ -17,7 +19,7 @@ export default function AboutSection({
         {photoUrl && (
           <Image
             src={faceCrop(photoUrl, 600)}
-            alt=""
+            alt={practitionerName}
             fill
             sizes="(max-width: 768px) 33vw, 360px"
             className="object-cover"
