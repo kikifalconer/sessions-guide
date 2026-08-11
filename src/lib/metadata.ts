@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { getSiteUrl } from '@/lib/siteUrl'
 
 /**
  * Single source of truth for page metadata.
@@ -10,9 +11,11 @@ import type { Metadata } from 'next'
  * Title rule: one pipe, brand as suffix, lowercase throughout.
  *   {concept} | sessions.guide
  * Never two pipes. Never a dash of any kind.
+ *
+ * The host comes from getSiteUrl() rather than a literal, so canonicals can
+ * never drift from the origin the rest of the app uses for email links.
  */
 
-export const SITE_URL = 'https://sessions.guide'
 export const SITE_NAME = 'sessions.guide'
 export const TITLE_SEPARATOR = ' | '
 
@@ -72,9 +75,10 @@ function validate(meta: PageMeta, title: string): void {
 }
 
 export function buildMetadata(meta: PageMeta): Metadata {
+  const siteUrl = getSiteUrl()
   const path = normalisePath(meta.path)
   const title = `${meta.concept}${TITLE_SEPARATOR}${SITE_NAME}`
-  const canonical = `${SITE_URL}${path === '/' ? '' : path}`
+  const canonical = `${siteUrl}${path === '/' ? '' : path}`
 
   validate(meta, title)
 
@@ -108,57 +112,5 @@ export function buildMetadata(meta: PageMeta): Metadata {
           },
         }
       : {}),
-  }
-}
-
-/**
- * Organization + WebSite JSON-LD. Emitted once, from the root layout.
- *
- * TODO before this ships — fill the four placeholder values below.
- * They are the fields flagged as missing in the schema audit.
- */
-export function organizationSchema() {
-  return {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'Organization',
-        '@id': `${SITE_URL}/#organization`,
-        name: SITE_NAME,
-        url: SITE_URL,
-        // TODO: the incorporated Canadian entity name
-        legalName: 'TODO_LEGAL_NAME',
-        founder: {
-          '@type': 'Person',
-          // TODO: founder's full name
-          name: 'TODO_FOUNDER_NAME',
-        },
-        address: {
-          '@type': 'PostalAddress',
-          // TODO: registered address
-          addressCountry: 'CA',
-          addressLocality: 'TODO_CITY',
-          addressRegion: 'TODO_REGION',
-        },
-        // TODO: live social profiles only. Delete this key entirely if there
-        // are none — an empty or stale array is worse than an absent one.
-        sameAs: [],
-      },
-      {
-        '@type': 'WebSite',
-        '@id': `${SITE_URL}/#website`,
-        url: SITE_URL,
-        name: SITE_NAME,
-        publisher: { '@id': `${SITE_URL}/#organization` },
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: {
-            '@type': 'EntryPoint',
-            urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
-          },
-          'query-input': 'required name=search_term_string',
-        },
-      },
-    ],
   }
 }
