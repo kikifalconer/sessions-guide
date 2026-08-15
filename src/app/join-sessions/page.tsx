@@ -37,7 +37,7 @@ const HERO = {
   h1: 'you hold the container. we hold the rest.',
   subhead:
     'sessions.guide was built around your practice, not the other way around: room to work in alignment with why you began, and less time lost to the admin that pulls you away from it.',
-  alt: "A practitioner's hands cradling the head of a person lying down with their eyes closed, a band of prism light across their face.",
+  alt: 'Two open hands held out with the palms up, a faint band of prism light resting across them.',
 }
 
 const ORIGIN = {
@@ -204,7 +204,7 @@ export default function JoinSessionsPage() {
         {/* ---------- Hero ---------- */}
         <section className="relative flex min-h-[88vh] flex-col overflow-hidden">
           <Image
-            src="/images/reikiHero2.jpg"
+            src="/images/healinghands.jpg"
             alt={HERO.alt}
             fill
             priority
