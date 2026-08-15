@@ -209,7 +209,7 @@ export default function JoinSessionsPage() {
             fill
             priority
             sizes="100vw"
-            className="parallax-hero object-cover"
+            className="object-cover"
           />
           {/* Legibility wash over the photograph. */}
           <div className="absolute inset-0 bg-black/35" />
