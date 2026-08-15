@@ -3,8 +3,24 @@
 Against **Page 3** of `~/Downloads/sessions-guide-three-page-copy-deck.md`, with
 `brand-voice.md` and [`design-system.md`](./design-system.md).
 
+> **STATUS: §4 of this plan is SUPERSEDED (2026-08-14).**
+>
+> `/join-sessions` has been rebuilt against a newer authoritative copy source,
+> supplied directly and superseding Page 3 of the three-page deck. The shipped
+> page does **not** match §4 below: there is no five step "How it works" spine
+> and no HowTo schema, the H1 is "you hold the container. we hold the rest."
+> (not "Run your practice, keep what you earn"), and the section set is
+> different. **Read `src/app/join-sessions/page.tsx` as the source of truth for
+> what is live.** §1 to §3 (the robots.txt fix, `llms.txt`, and the cross-page
+> audit) still stand and are unchanged.
+>
+> Carried over from §4 and still open: FAQPage schema shipped with the rebuild,
+> but the `/pricing` page is still wrong per D24, the `/kiki-falconer-2` seed
+> profile is still live in JSON-LD, and the "Request an invitation" mechanism is
+> still undecided (the CTA is a mailto placeholder).
+
 **Shipped this pass:** the robots.txt fix and `public/llms.txt`.
-**Not started:** the page rebuild and the dashboard field. Still blocked.
+**Not started:** the dashboard field. Still blocked.
 
 ---
 

@@ -267,6 +267,31 @@ export function sagePageJsonLd(opts: {
   }
 }
 
+// ---------- FAQ ----------
+
+// Built from the SAME array the page renders, never a hand-maintained copy, so
+// the answers a crawler reads can never drift from the answers a person reads.
+// Answers must be plain text: schema.org Answer.text is not markup.
+export function faqPageJsonLd(opts: {
+  url: string
+  items: { question: string; answer: string }[]
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    '@id': `${opts.url}#faq`,
+    isPartOf: { '@id': `${getSiteUrl()}/#website` },
+    mainEntity: opts.items.map((it) => ({
+      '@type': 'Question',
+      name: it.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: it.answer,
+      },
+    })),
+  }
+}
+
 // ---------- breadcrumbs (e.g. Readings › Astrology) ----------
 
 export function breadcrumbJsonLd(items: { name: string; url: string }[]) {
