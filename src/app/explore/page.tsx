@@ -10,10 +10,10 @@ export const metadata = buildMetadata({
   path: '/explore',
 })
 
-// Discovery landing. Mount-portable: it lives at /explore now and is destined
-// to become / when the holding page retires. Category links go through
-// categoryPath() (the fixed D12 namespace), so the landing can move without
-// touching them.
+// Discovery landing. Permanently at /explore: it is the browse index, not the
+// site's front door. The marketing landing page lives at /welcome and is what
+// takes / at launch. Category links go through categoryPath() (the fixed D12
+// namespace).
 export default async function ExplorePage() {
   const admin = createAdminClient()
   const { data: categories } = await admin

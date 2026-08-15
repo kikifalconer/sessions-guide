@@ -14,7 +14,7 @@ import HeaderNav, { type NavLink } from './header-nav'
 // page ships. SEARCH renders as a magnifier on desktop and a labeled row in
 // the menu.
 const LINKS: NavLink[] = [
-  { label: 'EXPLORE', href: '/', live: false },
+  { label: 'EXPLORE', href: '/explore', live: false },
   { label: 'SEARCH', href: '/search', live: true },
   { label: 'FOR PRACTITIONERS', href: '/join', live: false },
   { label: 'SAGES', href: '/sages', live: false },
