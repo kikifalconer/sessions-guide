@@ -87,6 +87,222 @@
   --radius-4xl: 0;
 }
 
+/* ============================================================
+   Redesign type scale (tokens)
+   ============================================================
+   TRACKED DEBT — see decisions.md TD12. These tokens are the single source
+   of truth for the redesign type scale, but the h1..h6 ELEMENT selectors
+   below still carry the original scale, because ~23 other routes render
+   those tags and are not redesigned yet. Two applied scales, one token set.
+
+   Opt in via the .t-* classes below; do not restyle the element selectors
+   until every route has moved over. The eventual flip is a few-line edit:
+   point h1/h2/h3 at these tokens and delete the .t-* wrappers.
+
+   Sizes are the ratio borrowed from the reference: headings much larger
+   than a typical marketing site, body comparatively small and tight. */
+@theme {
+  --text-display: clamp(2.75rem, 7.5vw, 8rem);
+  --text-display--line-height: 0.95;
+  --text-display--letter-spacing: -0.01em;
+
+  --text-h2: clamp(2rem, 4.5vw, 4.5rem);
+  --text-h2--line-height: 1;
+  --text-h2--letter-spacing: -0.01em;
+
+  --text-h3: clamp(1.5rem, 2.5vw, 2.5rem);
+  --text-h3--line-height: 1.1;
+  --text-h3--letter-spacing: 0em;
+
+  --text-lede: clamp(1.0625rem, 1.4vw, 1.375rem);
+  --text-lede--line-height: 1.45;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+
+  --text-eyebrow: 0.75rem;
+  --text-eyebrow--line-height: 1.4;
+  --text-eyebrow--letter-spacing: 0.12em;
+
+  /* Measure caps, consumed as max-w-lede / max-w-body. */
+  --container-lede: 56ch;
+  --container-body: 68ch;
+
+  /* Shared layout rhythm (12-col grid lives in .redesign-container). */
+  --spacing-gutter:  clamp(1.25rem, 4vw, 5rem);
+  --spacing-section: clamp(6rem, 12vh, 11rem);
+}
+
+/* Semantic wrappers over the tokens above, matching the .btn-* / .label
+   convention already used in this file. Case treatment lives here because
+   Tailwind font-size tokens cannot carry text-transform. */
+.t-display,
+.t-h2,
+.t-h3 {
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+}
+
+.t-display {
+  font-size: var(--text-display);
+  line-height: var(--text-display--line-height);
+  letter-spacing: var(--text-display--letter-spacing);
+}
+
+.t-h2 {
+  font-size: var(--text-h2);
+  line-height: var(--text-h2--line-height);
+  letter-spacing: var(--text-h2--letter-spacing);
+}
+
+.t-h3 {
+  font-size: var(--text-h3);
+  line-height: var(--text-h3--line-height);
+  letter-spacing: var(--text-h3--letter-spacing);
+}
+
+.t-lede {
+  font-family: var(--font-heading);
+  font-size: var(--text-lede);
+  line-height: var(--text-lede--line-height);
+  max-width: var(--container-lede);
+}
+
+.t-body {
+  font-family: var(--font-heading);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  max-width: var(--container-body);
+}
+
+.t-eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--text-eyebrow);
+  line-height: var(--text-eyebrow--line-height);
+  letter-spacing: var(--text-eyebrow--letter-spacing);
+  text-transform: uppercase;
+}
+
+/* Shared 12-column container for the redesigned routes. */
+.redesign-container {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: var(--spacing-gutter);
+}
+
+.redesign-section {
+  padding-block: var(--spacing-section);
+}
+
+/* ============================================================
+   Hover and focus (CSS only, no JS)
+   ============================================================
+   Durations and easing mirror src/lib/motion.ts: DUR.fast = 0.35s,
+   EASE.cssOut = cubic-bezier(0.16, 1, 0.3, 1). Keep them in step by hand;
+   CSS cannot import the TS tokens. */
+
+/* Underline wipes in from the left on hover, out to the right on leave. The
+   transform-origin swap is what makes the exit travel the opposite way. */
+.link-wipe {
+  position: relative;
+  display: inline-block;
+}
+
+.link-wipe::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -0.15em;
+  width: 100%;
+  height: 1px;
+  background-color: currentColor;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.link-wipe:hover::after,
+.link-wipe:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+/* Buttons fill vertically from the bottom edge. Square, no shadow, no scale.
+   The fill is a pseudo-element so the label never inherits the transform. */
+.btn-fill {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.btn-fill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--color-olive-hover);
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-fill:hover::before,
+.btn-fill:focus-visible::before {
+  transform: scaleY(1);
+}
+
+/* Focus ring: square, 2px, offset 3px, and independent of hover so keyboard
+   users get a state that pointer users never steal. */
+.link-wipe:focus-visible,
+.btn-fill:focus-visible {
+  outline: 2px solid var(--color-olive);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link-wipe::after,
+  .btn-fill::before {
+    transition: none;
+  }
+}
+
+/* Sticky header. Transparent over a hero, solid with a hairline rule after
+   ~80px. The hide/reveal on scroll direction is driven by data-hidden from
+   StickyHeader.tsx; the transition itself stays in CSS. */
+.sticky-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  border-bottom: 1px solid transparent;
+}
+
+.sticky-header[data-solid='true'] {
+  background-color: var(--color-bg);
+  border-bottom-color: var(--color-border);
+}
+
+.sticky-header[data-hidden='true'] {
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky-header {
+    transition: none;
+  }
+  /* Never hide the header when motion is reduced: a header that vanishes on
+     scroll is a navigation trap for anyone who did not expect it to move. */
+  .sticky-header[data-hidden='true'] {
+    transform: none;
+  }
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-dark);
