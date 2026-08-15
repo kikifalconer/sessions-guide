@@ -1,63 +1,49 @@
-'use client'
-
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { buildMetadata } from '@/lib/metadata'
+import HoldingForms from './HoldingForms'
 
-// Landing page. Header-free by design (the root layout injects no header); the
-// full-width wordmark is the top of the page. All colors/fonts come from CSS
-// variables (Tailwind tokens). The invitation + waitlist forms are preserved.
+// Holding page. Header-free by design (decisions.md, Shared Site Header):
+// the root layout injects no header and the full-width wordmark is the top of
+// the page. All colors/fonts come from CSS variables (Tailwind tokens).
+//
+// This is a SERVER component. It was 'use client' until now, which silently
+// disabled its metadata export: buildMetadata was imported and never called,
+// so / shipped with no canonical tag at all and inherited the root layout's
+// seeker-facing description. The two forms moved to ./HoldingForms.tsx
+// unchanged so this file can export metadata again.
 
-const FIELD =
-  'w-full border border-border bg-surface px-4 py-3 font-ui text-[0.8rem] tracking-[0.04em] text-dark outline-none focus:border-olive'
+// The page's own hero copy, reused verbatim as the meta description rather
+// than authoring a new string for the slot.
+const META_DESCRIPTION =
+  'A booking platform for transformational and healing sessions: ceremonies, readings, treatments, healings, and journeys.'
+
+// COPY NEEDED: page title concept for /.
+//
+// Every other route sets a lowercase concept and buildMetadata appends the
+// brand ("{concept} | sessions.guide"). No approved string exists for this
+// one: per the landing copy deck, the page title cascades from the A1 hero
+// candidate, which is still undecided. Rather than invent brand copy, the
+// title is pinned to exactly what / emits today, so this commit fixes the
+// canonical without changing what anyone reads. Replace the override below
+// with a real `concept` once A1 lands.
+const INTERIM_TITLE = 'sessions.guide'
+
+const base = buildMetadata({
+  concept: INTERIM_TITLE,
+  description: META_DESCRIPTION,
+  path: '/',
+})
+
+export const metadata: Metadata = {
+  ...base,
+  title: INTERIM_TITLE,
+  openGraph: { ...base.openGraph, title: INTERIM_TITLE },
+  twitter: { ...base.twitter, title: INTERIM_TITLE },
+}
 
 export default function LandingPage() {
-  const router = useRouter()
-
-  const [email, setEmail] = useState('')
-  const [waitlistState, setWaitlistState] = useState<'idle' | 'pending' | 'done' | 'error'>('idle')
-
-  const [code, setCode] = useState('')
-  const [codeState, setCodeState] = useState<'idle' | 'pending' | 'invalid'>('idle')
-
-  const submitWaitlist = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setWaitlistState('pending')
-    try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-      const json = await res.json()
-      setWaitlistState(res.ok && json.ok ? 'done' : 'error')
-    } catch {
-      setWaitlistState('error')
-    }
-  }
-
-  const submitCode = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCodeState('pending')
-    try {
-      const res = await fetch('/api/verify-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      })
-      const json = await res.json()
-      if (json.valid) {
-        router.push('/join')
-        return
-      }
-      setCodeState('invalid')
-    } catch {
-      setCodeState('invalid')
-    }
-  }
-
   return (
     <main>
       {/* ---------- Section 1 — wordmark, hero line, invitation ---------- */}
@@ -88,62 +74,7 @@ export default function LandingPage() {
             ceremonies, readings, treatments, healings, and journeys.
           </p>
 
-          <div className="mt-16 flex flex-col items-stretch justify-center gap-12 sm:flex-row sm:gap-16">
-            {/* Waitlist */}
-            <div className="w-full sm:max-w-[320px]">
-              {waitlistState === 'done' ? (
-                <p className="label text-light">{"You're on the list."}</p>
-              ) : (
-                <>
-                  <p className="label mb-3 text-light">APPLY FOR AN INVITATION</p>
-                  <form onSubmit={submitWaitlist} className="flex flex-col gap-3">
-                    <input
-                      type="email"
-                      required
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className={FIELD}
-                    />
-                    <button
-                      type="submit"
-                      className="btn-primary"
-                      disabled={waitlistState === 'pending'}
-                    >
-                      {waitlistState === 'pending' ? 'SENDING' : 'APPLY'}
-                    </button>
-                  </form>
-                  {waitlistState === 'error' && (
-                    <p className="label mt-3 text-light">Something went wrong. Try again.</p>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Invitation code */}
-            <div className="w-full sm:max-w-[320px]">
-              <p className="label mb-3 text-light">ENTER INVITATION CODE</p>
-              <form onSubmit={submitCode} className="flex flex-col gap-3">
-                <input
-                  type="text"
-                  placeholder="-"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className={`${FIELD} uppercase tracking-[0.1em]`}
-                />
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={codeState === 'pending'}
-                >
-                  {codeState === 'pending' ? 'CHECKING' : 'ENTER'}
-                </button>
-              </form>
-              {codeState === 'invalid' && (
-                <p className="label mt-3 text-light">{"That code isn't recognised."}</p>
-              )}
-            </div>
-          </div>
+          <HoldingForms />
         </div>
       </section>
 
