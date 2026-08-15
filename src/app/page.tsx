@@ -77,7 +77,7 @@ export default function LandingPage() {
         {/* Full-width wordmark, flush to the very top: no padding, no margin. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/sessions-logo-light.svg"
+          src="/sessionsguide-logo-light.svg"
           alt="Sessions Guide"
           className="relative z-[1] block w-full"
         />
