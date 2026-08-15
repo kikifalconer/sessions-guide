@@ -64,6 +64,29 @@
   --font-ui:       var(--font-ui);
 }
 
+/* ============================================================
+   Radius: zero at the token level
+   ============================================================
+   Every named radius token resolves to 0, so no `rounded-*` utility can
+   reintroduce a corner. This encodes a rule design-system.md already states
+   in three places (Buttons, Cards, Visual language).
+
+   Known gap, deliberately not papered over: `rounded-full` is NOT
+   theme-driven in Tailwind v4. It compiles to
+   `border-radius: calc(infinity * 1px)` and ignores these tokens entirely,
+   so it has to be removed at the call site rather than disarmed here. */
+@theme {
+  --radius:     0;
+  --radius-xs:  0;
+  --radius-sm:  0;
+  --radius-md:  0;
+  --radius-lg:  0;
+  --radius-xl:  0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-dark);
