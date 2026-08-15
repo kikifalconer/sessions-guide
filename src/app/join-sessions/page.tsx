@@ -22,7 +22,7 @@ import { JsonLd, faqPageJsonLd } from '@/lib/seo/structuredData'
 export const metadata = buildMetadata({
   concept: 'list your practice',
   description:
-    'A booking platform built for practitioners of the healing arts: coaches, astrologers, energy workers, facilitators, guides, intuitives, and more. Set your own rates, your own hours, your own terms. No commission, ever.',
+    'Built for practitioners of the healing arts: coaches, astrologers, facilitators, and more. Set your own rates, hours, and terms. No commission, ever.',
   path: '/join-sessions',
 })
 
@@ -177,8 +177,10 @@ const FAQ: { question: string; answer: string }[] = [
   },
   {
     question: "Can I be found by people who don't know what to search for?",
+    // Describes shipped discovery only. This answer is quoted verbatim into
+    // FAQPage JSON-LD, so it must not imply a guided flow that does not exist.
     answer:
-      "Yes. That's most people, and it's part of why the discovery path exists. You can also be found directly by name or modality if someone already knows what they're looking for.",
+      'Yes. You can be found by browsing category, by city, or by searching a modality name directly. Category pages carry full descriptions of what each kind of work is for, so someone can find their way to you without knowing the name of it first.',
   },
   {
     question: "Can I take down a review I don't like?",
@@ -273,6 +275,10 @@ export default function JoinSessionsPage() {
         <section className="border-t border-border bg-surface">
           <div className="mx-auto w-full max-w-[820px] px-6 py-24 sm:px-10">
             <h2 className="mb-6">{TIME.heading}</h2>
+            {/* TIER-UNENFORCED: no tier gate on Google Calendar connect. Same root cause as
+                F-3 (tierLimits.ts has zero importers). Both latent while all practitioners
+                are Elevated; both stop being latent at first trial expiry. Fix together in
+                A6 downgrade-semantics work, not here. */}
             <p className="label mb-10 text-dark">{TIME.gate}</p>
             <p className="mb-6 text-dark">{TIME.first}</p>
             <p className="mb-6 text-dark">{TIME.second}</p>
@@ -285,6 +291,9 @@ export default function JoinSessionsPage() {
           <h2 className="mb-10">{FOUND.heading}</h2>
           <p className="mb-6 text-dark">{FOUND.first}</p>
           <p className="mb-6 text-dark">{FOUND.second}</p>
+          {/* FEATURE-PENDING: "guided path" describes category-page descriptive intros
+              today. No quiz or wizard exists. Revisit if a real guided discovery flow
+              ships. */}
           <p className="text-dark">{FOUND.third}</p>
         </section>
 
