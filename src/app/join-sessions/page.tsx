@@ -3,13 +3,22 @@ import SiteHeader from '@/components/site-header'
 import { buildMetadata } from '@/lib/metadata'
 import { getSiteUrl } from '@/lib/siteUrl'
 import { JsonLd, faqPageJsonLd } from '@/lib/seo/structuredData'
+import MotionProvider from '@/components/motion/MotionProvider'
+import StickyHeader from '@/components/motion/StickyHeader'
+import RevealLines from '@/components/motion/RevealLines'
+import RevealBlock from '@/components/motion/RevealBlock'
+import ScrubScale from '@/components/motion/ScrubScale'
+import StickyStack from '@/components/motion/StickyStack'
 
 // Practitioner-facing invitation page. The copy is authored and final; this
 // file is the layout for it, not a place to rewrite it.
 //
 // Two anchors are load-bearing and must keep their ids:
 //   #how-it-works : the hero's secondary CTA scrolls here
-//   #pricing      : the site footer links here
+//   #pricing      : no inbound link today. The global footer links to the
+//                   /pricing ROUTE, not to this fragment. Kept because the
+//                   id is a stable deep-link target, but nothing depends on
+//                   it yet.
 //
 // Headings use bare h1/h2/h3 so they inherit the ITC Avant Garde Gothic Pro
 // uppercase treatment from globals.css. Nothing here uppercases text in JSX;
@@ -198,166 +207,249 @@ export default function JoinSessionsPage() {
   return (
     <>
       <JsonLd data={faqSeo} />
-      <SiteHeader />
+      <MotionProvider />
+
+      <StickyHeader>
+        <SiteHeader />
+      </StickyHeader>
 
       <main className="bg-bg">
         {/* ---------- Hero ---------- */}
-        <section className="relative flex min-h-[88vh] flex-col overflow-hidden">
-          <Image
-            src="/images/healinghands.jpg"
-            alt={HERO.alt}
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-          />
+        <section className="relative flex min-h-svh flex-col overflow-hidden">
+          <div className="absolute inset-0">
+            <ScrubScale className="h-full w-full">
+              <Image
+                src="/images/healinghands.jpg"
+                alt={HERO.alt}
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover"
+              />
+            </ScrubScale>
+          </div>
           {/* Legibility wash over the photograph. */}
           <div className="absolute inset-0 bg-black/35" />
 
-          <div className="relative z-[1] mx-auto flex w-full max-w-[900px] flex-1 flex-col justify-center px-6 py-24 text-center">
-            <p className="label mb-6 text-light">{HERO.eyebrow}</p>
-            {/* Inline style so it wins over the global h1 olive color. */}
-            <h1 style={{ color: 'var(--color-light)' }}>{HERO.h1}</h1>
-            <p className="mx-auto mt-8 max-w-[56ch] text-light">{HERO.subhead}</p>
+          <div className="redesign-container relative z-[1] flex flex-1 flex-col justify-center py-32 text-center">
+            <RevealBlock>
+              <p className="t-eyebrow mb-8 text-light">{HERO.eyebrow}</p>
+            </RevealBlock>
 
-            <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <a href={REQUEST_INVITATION_HREF} className="btn-primary">
+            <RevealLines as="h1" className="t-display mx-auto max-w-[18ch] text-light">
+              {HERO.h1}
+            </RevealLines>
+
+            <RevealBlock delay={0.25}>
+              <p className="t-lede mx-auto mt-10 text-light">{HERO.subhead}</p>
+            </RevealBlock>
+
+            <RevealBlock
+              stagger="loose"
+              delay={0.45}
+              className="mt-14 flex flex-col items-center justify-center gap-6 sm:flex-row"
+            >
+              <a href={REQUEST_INVITATION_HREF} className="btn-primary btn-fill">
                 Request an invitation
               </a>
-              <a href="#how-it-works" className="btn-secondary">
+              <a href="#how-it-works" className="link-wipe t-eyebrow text-light">
                 See how it works
               </a>
-            </div>
+            </RevealBlock>
           </div>
         </section>
 
         {/* ---------- Designed alongside the people who do this work ---------- */}
-        <section className="mx-auto w-full max-w-[820px] px-6 py-24 sm:px-10">
-          <h2 className="mb-10">{ORIGIN.heading}</h2>
-          <p className="mb-6 text-dark">{ORIGIN.body}</p>
-          <p className="caption mb-8 text-dark opacity-70">{ORIGIN.footnote}</p>
-          <p className="text-dark">{ORIGIN.close}</p>
+        <section className="redesign-container redesign-section">
+          <RevealLines as="h2" className="t-h2 mb-12 max-w-[20ch]">
+            {ORIGIN.heading}
+          </RevealLines>
+          <RevealBlock stagger="base" className="flex flex-col gap-8">
+            <p className="t-body text-dark">{ORIGIN.body}</p>
+            <p className="t-eyebrow max-w-[68ch] text-dark opacity-70">{ORIGIN.footnote}</p>
+            <p className="t-body text-dark">{ORIGIN.close}</p>
+          </RevealBlock>
         </section>
 
-        {/* ---------- Designed to move with your practice (hero CTA target) ---------- */}
+        {/* ---------- Designed to move with your practice (hero CTA target) ----------
+            The three pillars advance on scrub inside a pinned StickyStack above
+            768px; below it they scroll normally as three stacked blocks. */}
         <section
           id="how-it-works"
-          className="scroll-mt-24 border-t border-border bg-surface"
+          className="scroll-mt-28 border-t border-border bg-surface"
         >
-          <div className="mx-auto w-full max-w-[1200px] px-6 py-24 sm:px-10">
-            <h2 className="mb-8">Designed to move with your practice</h2>
-            <p className="mb-16 max-w-[68ch] text-dark">{PILLARS_INTRO}</p>
+          <div className="redesign-container redesign-section">
+            <RevealLines as="h2" className="t-h2 mb-10 max-w-[20ch]">
+              Designed to move with your practice
+            </RevealLines>
+            <RevealBlock>
+              <p className="t-lede text-dark">{PILLARS_INTRO}</p>
+            </RevealBlock>
+          </div>
 
-            <div className="grid grid-cols-1 gap-x-12 gap-y-14 md:grid-cols-3">
-              {PILLARS.map((p) => (
-                <div key={p.title}>
-                  <h3 className="mb-4">{p.title}</h3>
-                  <p className="text-dark">{p.body}</p>
+          <div className="redesign-container pb-24">
+            <StickyStack
+              className="min-h-[70vh]"
+              states={PILLARS.map((p) => (
+                <div
+                  key={p.title}
+                  className="flex min-h-[70vh] flex-col justify-center border-t border-border pt-10"
+                >
+                  <h3 className="t-h3 mb-6 max-w-[24ch]">{p.title}</h3>
+                  <p className="t-body text-dark">{p.body}</p>
                 </div>
               ))}
-            </div>
+            />
           </div>
         </section>
 
         {/* ---------- Be abundant ---------- */}
-        <section className="mx-auto w-full max-w-[820px] px-6 py-24 sm:px-10">
-          <h2 className="mb-10">{ABUNDANT.heading}</h2>
-          <p className="mb-6 text-dark">{ABUNDANT.first}</p>
-          <p className="text-dark">
-            {ABUNDANT.secondLead}
-            {/* FEATURE-PENDING: client CSV/export — must ship before invite codes are issued.
-                See known-issues.md GAP-3. Do not remove this comment until export exists. */}
-            {ABUNDANT.secondExport}
-          </p>
+        <section className="redesign-container redesign-section">
+          <RevealLines as="h2" className="t-h2 mb-12">
+            {ABUNDANT.heading}
+          </RevealLines>
+          <RevealBlock stagger="base" className="flex flex-col gap-8">
+            <p className="t-body text-dark">{ABUNDANT.first}</p>
+            <p className="t-body text-dark">
+              {ABUNDANT.secondLead}
+              {/* FEATURE-PENDING: client CSV/export — must ship before invite codes are issued.
+                  See known-issues.md GAP-3. Do not remove this comment until export exists. */}
+              {ABUNDANT.secondExport}
+            </p>
+          </RevealBlock>
         </section>
 
         {/* ---------- Hold your time with intention ---------- */}
         <section className="border-t border-border bg-surface">
-          <div className="mx-auto w-full max-w-[820px] px-6 py-24 sm:px-10">
-            <h2 className="mb-6">{TIME.heading}</h2>
+          <div className="redesign-container redesign-section">
+            <RevealLines as="h2" className="t-h2 mb-8">
+              {TIME.heading}
+            </RevealLines>
             {/* TIER-UNENFORCED: no tier gate on Google Calendar connect. Same root cause as
                 F-3 (tierLimits.ts has zero importers). Both latent while all practitioners
                 are Elevated; both stop being latent at first trial expiry. Fix together in
                 A6 downgrade-semantics work, not here. */}
-            <p className="label mb-10 text-dark">{TIME.gate}</p>
-            <p className="mb-6 text-dark">{TIME.first}</p>
-            <p className="mb-6 text-dark">{TIME.second}</p>
-            <p className="text-dark">{TIME.third}</p>
+            <RevealBlock>
+              <p className="t-eyebrow mb-12 text-olive">{TIME.gate}</p>
+            </RevealBlock>
+            <RevealBlock stagger="base" className="flex flex-col gap-8">
+              <p className="t-body text-dark">{TIME.first}</p>
+              <p className="t-body text-dark">{TIME.second}</p>
+              <p className="t-body text-dark">{TIME.third}</p>
+            </RevealBlock>
           </div>
         </section>
 
         {/* ---------- Be found, named or not ---------- */}
-        <section className="mx-auto w-full max-w-[820px] px-6 py-24 sm:px-10">
-          <h2 className="mb-10">{FOUND.heading}</h2>
-          <p className="mb-6 text-dark">{FOUND.first}</p>
-          <p className="mb-6 text-dark">{FOUND.second}</p>
-          {/* FEATURE-PENDING: "guided path" describes category-page descriptive intros
-              today. No quiz or wizard exists. Revisit if a real guided discovery flow
-              ships. */}
-          <p className="text-dark">{FOUND.third}</p>
+        <section className="redesign-container redesign-section">
+          <RevealLines as="h2" className="t-h2 mb-12">
+            {FOUND.heading}
+          </RevealLines>
+          <RevealBlock stagger="base" className="flex flex-col gap-8">
+            <p className="t-body text-dark">{FOUND.first}</p>
+            <p className="t-body text-dark">{FOUND.second}</p>
+            {/* FEATURE-PENDING: "guided path" describes category-page descriptive intros
+                today. No quiz or wizard exists. Revisit if a real guided discovery flow
+                ships. */}
+            <p className="t-body text-dark">{FOUND.third}</p>
+          </RevealBlock>
         </section>
 
         {/* ---------- The follow-up moves with grace ---------- */}
         <section className="border-t border-border bg-surface">
-          <div className="mx-auto w-full max-w-[820px] px-6 py-24 sm:px-10">
-            <h2 className="mb-10">{FOLLOW_UP.heading}</h2>
-            <p className="mb-6 text-dark">{FOLLOW_UP.first}</p>
-            <p className="text-dark">{FOLLOW_UP.second}</p>
+          <div className="redesign-container redesign-section">
+            <RevealLines as="h2" className="t-h2 mb-12">
+              {FOLLOW_UP.heading}
+            </RevealLines>
+            <RevealBlock stagger="base" className="flex flex-col gap-8">
+              <p className="t-body text-dark">{FOLLOW_UP.first}</p>
+              <p className="t-body text-dark">{FOLLOW_UP.second}</p>
+            </RevealBlock>
           </div>
         </section>
 
-        {/* ---------- Tiers and pricing (the site footer links to #pricing) ---------- */}
-        <section id="pricing" className="scroll-mt-24 border-t border-border">
-          <div className="mx-auto w-full max-w-[1200px] px-6 py-24 sm:px-10">
-            <h2 className="mb-16">{'Tiers & pricing'}</h2>
+        {/* ---------- Tiers and pricing (#pricing deep-link target) ---------- */}
+        <section id="pricing" className="scroll-mt-28 border-t border-border">
+          <div className="redesign-container redesign-section">
+            <RevealLines as="h2" className="t-h2 mb-16">
+              {'Tiers & pricing'}
+            </RevealLines>
 
-            <div className="grid grid-cols-1 gap-x-12 gap-y-12 md:grid-cols-3">
+            {/* Square borders, 1px rules, no elevation. Emphasis is type weight
+                and a fill block, never a badge. */}
+            <RevealBlock stagger="base" className="grid grid-cols-1 gap-px bg-border md:grid-cols-3">
               {TIERS.map((t) => (
-                <div key={t.name} className="border border-border bg-surface p-8">
-                  <h3 className="mb-4">{t.name}</h3>
-                  <p className="mb-8 text-dark">{t.body}</p>
-                  <p className="label text-olive">{t.price}</p>
-                </div>
+                <RevealBlock
+                  key={t.name}
+                  stagger="tight"
+                  className="flex flex-col bg-bg p-10"
+                >
+                  <h3 className="t-h3 mb-6">{t.name}</h3>
+                  <p className="t-body mb-10 flex-1 text-dark">{t.body}</p>
+                  <p className="t-eyebrow bg-olive px-4 py-3 text-center text-light">
+                    {t.price}
+                  </p>
+                </RevealBlock>
               ))}
-            </div>
+            </RevealBlock>
 
-            <p className="mt-12 text-dark">
-              No commission, on any tier. Leave or change whenever you need to.
-            </p>
+            <RevealBlock>
+              <p className="t-body mt-16 text-dark">
+                No commission, on any tier. Leave or change whenever you need to.
+              </p>
+            </RevealBlock>
           </div>
         </section>
 
-        {/* ---------- Close ---------- */}
-        <section className="border-t border-border bg-surface">
-          <div className="mx-auto w-full max-w-[720px] px-6 py-28 text-center sm:px-10">
-            <h2 className="mb-10">{CLOSE.heading}</h2>
-            <p className="mb-6 text-dark">{CLOSE.first}</p>
-            <p className="mb-12 text-dark">{CLOSE.second}</p>
+        {/* ---------- Close (inverted full-bleed block) ---------- */}
+        <section className="bg-olive text-light">
+          <div className="redesign-container redesign-section text-center">
+            <RevealLines as="h2" className="t-h2 mx-auto mb-12 max-w-[18ch] text-light">
+              {CLOSE.heading}
+            </RevealLines>
+            <RevealBlock stagger="base" className="flex flex-col items-center gap-8">
+              <p className="t-body text-light">{CLOSE.first}</p>
+              <p className="t-body text-light">{CLOSE.second}</p>
+            </RevealBlock>
 
-            <a href={REQUEST_INVITATION_HREF} className="btn-primary">
-              Request an invitation
-            </a>
+            <RevealBlock delay={0.2}>
+              <a
+                href={REQUEST_INVITATION_HREF}
+                className="btn-secondary btn-fill mt-14 border-light text-light"
+              >
+                Request an invitation
+              </a>
+            </RevealBlock>
 
-            <p className="caption mx-auto mt-12 max-w-[60ch] text-dark opacity-70">
-              {CLOSE.note}
-            </p>
+            <RevealBlock>
+              <p className="t-eyebrow mx-auto mt-16 max-w-[60ch] text-light opacity-80">
+                {CLOSE.note}
+              </p>
+            </RevealBlock>
           </div>
         </section>
 
         {/* ---------- FAQ ----------
-            Plain divs rather than a <dl>: heading content is not permitted
-            inside <dt>, and the h3 questions are what carry the heading
-            structure for search and answer engines. */}
+            Native <details>/<summary> so it opens, closes and indexes with JS
+            off. The h3 sits INSIDE <summary>, which keeps the heading outline
+            byte-identical to the previous h3 + p markup. faqPageJsonLd reads
+            the same FAQ array this renders, so the schema cannot drift. */}
         <section className="border-t border-border">
-          <div className="mx-auto w-full max-w-[820px] px-6 py-24 sm:px-10">
-            <h2 className="mb-16">Questions practitioners ask</h2>
+          <div className="redesign-container redesign-section">
+            <RevealLines as="h2" className="t-h2 mb-16">
+              Questions practitioners ask
+            </RevealLines>
 
-            {FAQ.map((item) => (
-              <div key={item.question} className="mb-10 last:mb-0">
-                <h3 className="mb-3">{item.question}</h3>
-                <p className="text-dark">{item.answer}</p>
-              </div>
-            ))}
+            <RevealBlock stagger="tight">
+              {FAQ.map((item) => (
+                <details key={item.question} className="faq-item border-b border-border py-8">
+                  <summary>
+                    <h3 className="t-h3 max-w-[28ch]">{item.question}</h3>
+                  </summary>
+                  <p className="t-body pt-6 text-dark">{item.answer}</p>
+                </details>
+              ))}
+            </RevealBlock>
           </div>
         </section>
       </main>

@@ -267,6 +267,76 @@
   }
 }
 
+/* ============================================================
+   FAQ accordion
+   ============================================================
+   Native <details>/<summary>. It opens, closes, and indexes with JS off; the
+   height animation is progressive enhancement layered on top via
+   ::details-content, which is the only way to transition a <details> open
+   height without script. Browsers without ::details-content (or without
+   interpolate-size) simply snap open, which is the correct fallback.
+
+   The marker is removed rather than restyled so the h3 inside <summary> keeps
+   the heading outline it had as a bare h3. */
+.faq-item > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.faq-item > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Square +/- affordance drawn with borders, no glyph, no radius. */
+.faq-item > summary::after {
+  content: '';
+  flex: 0 0 auto;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: translateY(-0.25em) rotate(45deg);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.faq-item[open] > summary::after {
+  transform: translateY(0.1em) rotate(-135deg);
+}
+
+.faq-item > summary:focus-visible {
+  outline: 2px solid var(--color-olive);
+  outline-offset: 3px;
+}
+
+@supports selector(::details-content) {
+  :root {
+    interpolate-size: allow-keywords;
+  }
+
+  .faq-item::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition:
+      block-size 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+      content-visibility 0.35s allow-discrete;
+  }
+
+  .faq-item[open]::details-content {
+    block-size: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-item > summary::after,
+  .faq-item::details-content {
+    transition: none;
+  }
+}
+
 /* Sticky header. Transparent over a hero, solid with a hairline rule after
    ~80px. The hide/reveal on scroll direction is driven by data-hidden from
    StickyHeader.tsx; the transition itself stays in CSS. */

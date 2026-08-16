@@ -67,6 +67,30 @@ export default function MotionProvider() {
       gsap.ticker.add(raf)
       gsap.ticker.lagSmoothing(0)
 
+      // Same-page anchors. A native hash jump fights Lenis: the browser sets
+      // scrollTop directly while Lenis is mid-interpolation, so the landing
+      // position is wrong or the jump is undone on the next frame. Hand these
+      // to lenis.scrollTo instead. Under reduced motion there is no Lenis and
+      // this listener never exists, so native anchor behaviour is untouched.
+      const onAnchorClick = (event: MouseEvent) => {
+        if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.button !== 0) return
+        const anchor = (event.target as Element | null)?.closest?.('a[href^="#"]')
+        if (!anchor) return
+        const hash = anchor.getAttribute('href')
+        if (!hash || hash === '#') return
+        const target = document.querySelector(hash)
+        if (!target) return
+        event.preventDefault()
+        // No offset: Lenis reads the target's scroll-margin-top itself, so
+        // passing our own correction lands the element at twice the margin.
+        // Measured: with a manual -112 offset the section landed 224px down
+        // instead of 112px. Let Lenis do it.
+        lenis.scrollTo(target as HTMLElement)
+        // Keep the URL and the back button behaving as they would natively.
+        history.pushState(null, '', hash)
+      }
+      document.addEventListener('click', onAnchorClick)
+
       // Webfonts change line boxes, which changes every trigger's start/end.
       // Recompute once the faces are in.
       if (document.fonts?.ready) {
@@ -76,6 +100,7 @@ export default function MotionProvider() {
       }
 
       dispose = () => {
+        document.removeEventListener('click', onAnchorClick)
         gsap.ticker.remove(raf)
         gsap.ticker.lagSmoothing(500, 33)
         lenis.destroy()
