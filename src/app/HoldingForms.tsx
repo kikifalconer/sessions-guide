@@ -2,19 +2,26 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import RevealBlock from '@/components/motion/RevealBlock'
 
 // The two forms from the holding page, split out so that src/app/page.tsx can
 // be a server component and export metadata (a 'use client' page cannot).
 //
-// This is a lift, not a rewrite. Same endpoints, same state machines, same
-// button label swaps, same success and failure strings, same markup and
-// classes. Nothing here should change until the restyle pass, which is
-// deliberately a separate commit.
+// Behaviour is frozen: same endpoints, same state machines, same button label
+// swaps, same success and failure strings. The restyle touches presentation
+// only.
+//
+// The two columns are the direct children of the RevealBlock so that
+// STAGGER.loose actually staggers them against each other. Wrapping this
+// component from outside would stagger a single element, which is a no-op.
 
+// Square by construction (the radius tokens are 0, and no rounded utility is
+// used). text-body is 1rem, which also stops iOS Safari zooming the viewport
+// on focus, something the previous 0.8rem did trigger.
 const FIELD =
-  'w-full border border-border bg-surface px-4 py-3 font-ui text-[0.8rem] tracking-[0.04em] text-dark outline-none focus:border-olive'
+  'w-full border border-border bg-surface px-4 py-3 font-ui text-body tracking-[0.04em] text-dark outline-none transition-colors focus:border-olive focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-olive'
 
-export default function HoldingForms() {
+export default function HoldingForms({ delay = 0 }: { delay?: number }) {
   const router = useRouter()
 
   const [email, setEmail] = useState('')
@@ -60,14 +67,18 @@ export default function HoldingForms() {
   }
 
   return (
-    <div className="mt-16 flex flex-col items-stretch justify-center gap-12 sm:flex-row sm:gap-16">
+    <RevealBlock
+      stagger="loose"
+      delay={delay}
+      className="mt-20 flex flex-col items-stretch gap-10 sm:flex-row sm:gap-16"
+    >
       {/* Waitlist */}
       <div className="w-full sm:max-w-[320px]">
         {waitlistState === 'done' ? (
-          <p className="label text-light">{"You're on the list."}</p>
+          <p className="t-eyebrow text-light">{"You're on the list."}</p>
         ) : (
           <>
-            <p className="label mb-3 text-light">APPLY FOR AN INVITATION</p>
+            <p className="t-eyebrow mb-4 text-light">APPLY FOR AN INVITATION</p>
             <form onSubmit={submitWaitlist} className="flex flex-col gap-3">
               <input
                 type="email"
@@ -79,14 +90,14 @@ export default function HoldingForms() {
               />
               <button
                 type="submit"
-                className="btn-primary"
+                className="btn-primary btn-fill"
                 disabled={waitlistState === 'pending'}
               >
                 {waitlistState === 'pending' ? 'SENDING' : 'APPLY'}
               </button>
             </form>
             {waitlistState === 'error' && (
-              <p className="label mt-3 text-light">Something went wrong. Try again.</p>
+              <p className="t-eyebrow mt-3 text-light">Something went wrong. Try again.</p>
             )}
           </>
         )}
@@ -94,7 +105,7 @@ export default function HoldingForms() {
 
       {/* Invitation code */}
       <div className="w-full sm:max-w-[320px]">
-        <p className="label mb-3 text-light">ENTER INVITATION CODE</p>
+        <p className="t-eyebrow mb-4 text-light">ENTER INVITATION CODE</p>
         <form onSubmit={submitCode} className="flex flex-col gap-3">
           <input
             type="text"
@@ -105,16 +116,16 @@ export default function HoldingForms() {
           />
           <button
             type="submit"
-            className="btn-primary"
+            className="btn-primary btn-fill"
             disabled={codeState === 'pending'}
           >
             {codeState === 'pending' ? 'CHECKING' : 'ENTER'}
           </button>
         </form>
         {codeState === 'invalid' && (
-          <p className="label mt-3 text-light">{"That code isn't recognised."}</p>
+          <p className="t-eyebrow mt-3 text-light">{"That code isn't recognised."}</p>
         )}
       </div>
-    </div>
+    </RevealBlock>
   )
 }

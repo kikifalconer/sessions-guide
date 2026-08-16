@@ -43,8 +43,10 @@ export default function ScrubScale({
       if (disposed) return
       gsap.registerPlugin(ScrollTrigger)
 
-      inner.style.willChange = 'transform'
-
+      // A scrub tween never "completes", so will-change cannot be cleared in
+      // onComplete the way a normal reveal does it. Toggle it on the trigger
+      // instead: the layer exists only while the element is actually in the
+      // viewport being scrubbed, and is released the moment it leaves.
       const tween = gsap.fromTo(
         inner,
         { scale: 1.08, y: -travel / 2 },
@@ -58,6 +60,9 @@ export default function ScrubScale({
             end: 'bottom top',
             scrub: true,
             invalidateOnRefresh: true,
+            onToggle: (self) => {
+              inner.style.willChange = self.isActive ? 'transform' : ''
+            },
           },
         }
       )
