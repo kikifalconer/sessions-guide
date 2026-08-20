@@ -539,7 +539,30 @@ Editing is **admin-only via an interim env gate**: authenticated user whose `use
 
 ---
 
-## Terminology — Sage → Guide, Seeker retained (July 2026)
+## Terminology — curator role is Sage (August 2026, reverses the July entry below)
+
+**Decision:** The curator role is **Sage**. The July 2026 rename to "Guide" is
+withdrawn before it ever shipped.
+
+**Rationale:** The platform is now **Guides' Space**. The July decision's stated
+reason was that "Guide" aligned the curator role with the `sessions.guide` name;
+that name no longer exists, so the rationale is void. Worse, keeping it would put
+the company name and a role noun in the same sentence with different meanings
+("a Guide on Guides' Space"), which no amount of capitalisation rescues.
+
+**Implications:** None in code. The rename was logged but never implemented, so
+`src/` still said Sage everywhere: the `sages` table, the `/sages` route,
+`sagePageJsonLd`, `getSage`, `getSageRecommendations`, and the `SAGES` nav label.
+Zero display strings called curators Guides. Copy task A6 (the rename sweep) is
+cancelled in `content-copy-tasks.md` rather than completed.
+
+**"Guide" is now reserved for two other things:** the brand ("Guides' Space") and
+editorial guides (the `/guides/[slug]` articles, which are content pages and were
+never the curator role). Practitioners are still never called guides.
+
+---
+
+## Terminology — Sage → Guide, Seeker retained (July 2026) — REVERSED, see above
 
 **Decision:** The curator role is renamed "Guide" in all display copy. "Seeker"
 is retained as the term for the booking-side audience. "Client" is reserved for
