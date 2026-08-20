@@ -39,19 +39,19 @@ export const metadata = buildMetadata({
 // else). This mailto is a placeholder, pointing at the address /contact and
 // /privacy already publish. Swap this one constant when the mechanism lands.
 const REQUEST_INVITATION_HREF =
-  'mailto:hello@sessions.guide?subject=Invitation%20request'
+  'mailto:hello@guidesspace.com?subject=Invitation%20request'
 
 const HERO = {
   eyebrow: 'for practitioners of the healing arts',
   h1: 'you hold the container. we hold the rest.',
   subhead:
-    'sessions.guide was built around your practice, not the other way around: room to work in alignment with why you began, and less time lost to the admin that pulls you away from it.',
+    'guides’space was built around your practice, not the other way around: room to work in alignment with why you began, and less time lost to the admin that pulls you away from it.',
   alt: 'Two open hands held out with the palms up, a faint band of prism light resting across them.',
 }
 
 const ORIGIN = {
   heading: 'Designed alongside the people who do this work',
-  body: 'sessions.guide was built from a decade of experience working with thousands* of practitioners, healers, teachers, and guides. And though their work was unique, their challenges were common. What we learned, again and again, is that most tools ask you to shrink your practice to fit a template built for something else entirely. So we built one around the work itself, not despite it.',
+  body: 'guides’space was built from a decade of experience working with thousands* of practitioners, healers, teachers, and guides. And though their work was unique, their challenges were common. What we learned, again and again, is that most tools ask you to shrink your practice to fit a template built for something else entirely. So we built one around the work itself, not despite it.',
   footnote:
     '*literally, 2740+ coaches, doulas, sound healers, astrologers, feng shui designers, equine therapists, etc. while co-creating Conscious City Guide',
   close:
@@ -59,7 +59,7 @@ const ORIGIN = {
 }
 
 const PILLARS_INTRO =
-  "sessions.guide adapts to your life and how you already work, rather than asking you to fit someone else's template. Three things stay fully in your hands:"
+  "guides’space adapts to your life and how you already work, rather than asking you to fit someone else's template. Three things stay fully in your hands:"
 
 const PILLARS: { title: string; body: string }[] = [
   {
@@ -68,7 +68,7 @@ const PILLARS: { title: string; body: string }[] = [
   },
   {
     title: 'Where you practice.',
-    body: "Whether you're nomadic, working from a studio, or holding sessions from your living room, sessions.guide moves with you instead of asking you to move to it. Set your location per session: in person, virtual, or both. And if your practice travels, so does your visibility, with the freedom to land somewhere new without rebuilding a client list from scratch.",
+    body: "Whether you're nomadic, working from a studio, or holding sessions from your living room, guides’space moves with you instead of asking you to move to it. Set your location per session: in person, virtual, or both. And if your practice travels, so does your visibility, with the freedom to land somewhere new without rebuilding a client list from scratch.",
   },
   {
     title: "When you're available.",
@@ -139,7 +139,7 @@ const CLOSE = {
   first: 'This is where your practice, your purpose, and your power meet.',
   second:
     'If the way you work has never quite fit the tools you were handed, we would love for you to see this one.',
-  note: "sessions.guide is invitation-only right now, while we grow alongside a small group of practitioners. That's temporary. We're building toward an open platform, anchored by real reviews, and invitations will widen as that foundation grows stronger.",
+  note: "guides’space is invitation-only right now, while we grow alongside a small group of practitioners. That's temporary. We're building toward an open platform, anchored by real reviews, and invitations will widen as that foundation grows stronger.",
 }
 
 // Single source for both the rendered FAQ and the FAQPage JSON-LD. Plain

@@ -300,7 +300,7 @@ export function buildDigest(
   const site = getSiteUrl()
   const url = (slug: string) => (slug ? `${site}/${slug}/reviews` : '(no practitioner slug)')
 
-  const lines: string[] = ['Report triage for sessions.guide.', '']
+  const lines: string[] = ['Report triage for guides’space.', '']
   lines.push(
     reportsFound === 0
       ? 'No new reports in the last 25 hours. All clear.'
@@ -374,7 +374,7 @@ export async function sendDigest(subject: string, text: string): Promise<boolean
     console.error('[report-triage] email not configured; RESEND_API_KEY or RESEND_FROM_EMAIL missing')
     return false
   }
-  const to = process.env.REPORT_NOTICE_EMAIL ?? 'hello@sessions.guide'
+  const to = process.env.REPORT_NOTICE_EMAIL ?? 'hello@guidesspace.com'
   const resend = new Resend(apiKey)
   try {
     const { error } = await resend.emails.send({ from, to, subject, text })

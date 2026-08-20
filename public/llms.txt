@@ -1,6 +1,6 @@
-# sessions.guide
+# guides’space
 
-sessions.guide is a booking platform for practitioners of the healing arts,
+guides’space is a booking platform for practitioners of the healing arts,
 where seekers find and book reiki, astrology, sound healing, ceremony, and
 other transformational sessions directly with the practitioner.
 

@@ -12,7 +12,7 @@ export async function generateMetadata({
 }) {
   const { slug } = await params
   const data = await reviewsForPractitioner(slug)
-  return { title: data ? `Reviews of ${data.practitioner.fullName} | sessions.guide` : 'sessions.guide' }
+  return { title: data ? `Reviews of ${data.practitioner.fullName} | guides’space` : 'guides’space' }
 }
 
 export default async function ReviewsPage({

@@ -96,10 +96,10 @@ export async function generateMetadata({
   const profile = await fetchProfile(slug)
   // Never leak an unpublished practitioner's name/tagline via metadata: the page
   // body 404s for non-owners, so the <head> must not identify them either (H2).
-  if (!profile || !profile.is_published) return { title: 'sessions.guide' }
+  if (!profile || !profile.is_published) return { title: 'guides’space' }
   if (isFixture(slug)) {
     return {
-      title: 'sessions.guide',
+      title: 'guides’space',
       robots: { index: false, follow: false },
     }
   }
@@ -110,8 +110,8 @@ export async function generateMetadata({
     profile.tagline ?? (profile.bio ? `${profile.bio.slice(0, 155).trimEnd()}` : undefined)
   return {
     title: primaryModality
-  ? `${profile.full_name}, ${primaryModality} | sessions.guide`
-      : `${profile.full_name} | sessions.guide`,
+  ? `${profile.full_name}, ${primaryModality} | guides’space`
+      : `${profile.full_name} | guides’space`,
     description,
   }
 }

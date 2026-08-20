@@ -96,7 +96,7 @@ export default function SeekerSettings({
             className="mt-1 h-4 w-4 accent-olive"
           />
           <span className="font-heading text-sm font-light text-dark">
-            Send me occasional notes from sessions.guide.
+            Send me occasional notes from guides’space.
           </span>
         </label>
 

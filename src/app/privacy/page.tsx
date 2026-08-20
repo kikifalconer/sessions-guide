@@ -1,7 +1,7 @@
 import SiteHeader from '@/components/site-header'
 
 export const metadata = {
-  title: 'privacy | sessions.guide',
+  title: 'privacy | guides’space',
 }
 
 export default function PrivacyPage() {
@@ -16,14 +16,14 @@ export default function PrivacyPage() {
           <p className="mt-10 text-dark">
             This Privacy Policy explains what information Sessions Guide Inc.
             collects, how we use it, and the choices you have. It applies to the
-            Sessions Guide website and services. By using Sessions Guide, you agree
+            guides’space website and services. By using guides’space, you agree
             to the practices described here.
           </p>
 
           <section className="mt-12">
             <h3 className="mb-3">Who we are</h3>
             <p className="text-dark">
-              Sessions Guide is a booking platform that connects seekers with
+              guides’space is a booking platform that connects seekers with
               practitioners of transformational and healing work. When we say we,
               us, or our, we mean Sessions Guide Inc.
             </p>
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
             <h3 className="mb-3">Payments</h3>
             <p className="text-dark">
               Payments made on the platform are processed by Stripe. When you pay
-              through Sessions Guide, your payment information is provided directly
+              through guides’space, your payment information is provided directly
               to Stripe and handled under the Stripe privacy terms. Some
               practitioners arrange payment with you directly, outside the platform.
             </p>
@@ -148,7 +148,7 @@ export default function PrivacyPage() {
           <section className="mt-12">
             <h3 className="mb-3">Children</h3>
             <p className="text-dark">
-              Sessions Guide is intended for adults. It is not directed to children
+              guides’space is intended for adults. It is not directed to children
               under the age of majority, and we do not knowingly collect their
               personal information.
             </p>
@@ -165,7 +165,7 @@ export default function PrivacyPage() {
           <section className="mt-12">
             <h3 className="mb-3">Contact</h3>
             <p className="text-dark">
-              Questions about privacy are welcome at hello@sessions.guide.
+              Questions about privacy are welcome at hello@guidesspace.com.
             </p>
           </section>
         </div>

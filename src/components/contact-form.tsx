@@ -84,7 +84,7 @@ export default function ContactForm({ topic }: { topic: 'help' | 'contact' }) {
 
       {state === 'error' && (
         <p className="caption text-olive">
-          Something went wrong. Try again, or write to hello@sessions.guide.
+          Something went wrong. Try again, or write to hello@guidesspace.com.
         </p>
       )}
 

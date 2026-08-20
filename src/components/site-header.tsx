@@ -46,14 +46,14 @@ export default async function SiteHeader({ centerLabel }: { centerLabel?: string
   return (
     <header className="flex items-center justify-between gap-2 bg-bg px-3 py-4 sm:px-6 sm:py-5">
       <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-        <Link href="/" aria-label="Guides' Space home" className="shrink-0">
+        <Link href="/" aria-label="guides’space home" className="shrink-0">
           {/* Sage mark: dark lettering, for the light header field. Dimensions
               carry the PNG's real 7.12:1 aspect (7689x1080) rather than the old
               SVG's 4.93:1, so it is not stretched; next/image serves a 2x
               srcset from the large source, so it stays crisp. */}
           <Image
             src="/guidesspace-logo-sage.png"
-            alt="Guides' Space"
+            alt="guides’space"
             width={199}
             height={28}
             priority

@@ -84,10 +84,10 @@ const PSYCHEDELIC_DISCLAIMER =
   'Psychedelic journey facilitation may be subject to local laws and regulations. Practitioners and clients are solely responsible for ensuring compliance with the laws of their jurisdiction.'
 
 // Title: "{Category} Practitioners - {as many modalities as fit ~60 chars} |
-// sessions.guide". No em dashes; the modality list is comma-separated and the
+// guides’space". No em dashes; the modality list is comma-separated and the
 // full list lives in the description. Falls back cleanly when no modalities fit.
 function categoryTitle(categoryName: string, modalityNames: string[]): string {
-  const suffix = ' | sessions.guide'
+  const suffix = ' | guides’space'
   const prefix = `${categoryName.toLowerCase()} practitioners`
   if (modalityNames.length === 0) return `${prefix}${suffix}`
   // Always include the first modality (the keyword whole point), then add more
@@ -114,7 +114,7 @@ export async function generateMetadata({
     .select('id, name')
     .eq('slug', category)
     .maybeSingle()
-  if (!cat) return { title: 'sessions.guide' }
+  if (!cat) return { title: 'guides’space' }
 
   // All approved modalities in this category (decision 6): keyword payload for
   // both the title and the description.
@@ -127,8 +127,8 @@ export async function generateMetadata({
   const modalityNames = (mods ?? []).map((m) => m.name as string)
 
   const description = modalityNames.length
-    ? `Find and book ${cat.name} practitioners on sessions.guide, including ${modalityNames.join(', ')}. Virtual and in-person sessions available.`
-    : `Find and book ${cat.name} practitioners on sessions.guide. Virtual and in-person sessions available.`
+    ? `Find and book ${cat.name} practitioners on guides’space, including ${modalityNames.join(', ')}. Virtual and in-person sessions available.`
+    : `Find and book ${cat.name} practitioners on guides’space. Virtual and in-person sessions available.`
 
   return { title: categoryTitle(cat.name, modalityNames), description }
 }

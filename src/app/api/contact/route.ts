@@ -7,7 +7,7 @@ import { Resend } from 'resend'
 export const runtime = 'nodejs'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const NOTIFY_TO = 'hello@sessions.guide'
+const NOTIFY_TO = 'hello@guidesspace.com'
 
 function oneLine(value: string): string {
   return value.replace(/[\r\n]+/g, ' ').trim()

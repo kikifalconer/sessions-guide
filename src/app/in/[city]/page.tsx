@@ -16,10 +16,10 @@ export async function generateMetadata({
 }) {
   const { city } = await params
   const result = await discoverInCity(city)
-  if (!result) return { title: 'sessions.guide' }
+  if (!result) return { title: 'guides’space' }
   return {
-    title: `Healing & Wellness Practitioners in ${result.displayCity} | sessions.guide`,
-    description: `Find and book wellness practitioners in ${result.displayCity} on sessions.guide. Virtual sessions are available everywhere, wherever you are.`,
+    title: `Healing & Wellness Practitioners in ${result.displayCity} | guides’space`,
+    description: `Find and book wellness practitioners in ${result.displayCity} on guides’space. Virtual sessions are available everywhere, wherever you are.`,
   }
 }
 

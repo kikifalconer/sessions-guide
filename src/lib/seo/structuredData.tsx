@@ -1,5 +1,5 @@
 // src/lib/seo/structuredData.tsx
-// JSON-LD builders for sessions.guide. Server-side only (no client imports).
+// JSON-LD builders for guides’space. Server-side only (no client imports).
 // Every builder returns a plain object; render via <JsonLd data={...} /> below.
 //
 // Schema references: schema.org Person, Service, Offer, AggregateRating,
@@ -7,7 +7,7 @@
 
 import { getSiteUrl } from '@/lib/siteUrl'
 
-const SITE_NAME = 'sessions.guide'
+const SITE_NAME = 'guides’space'
 
 // ---------- shared types (mirror schema.md, minimal fields only) ----------
 

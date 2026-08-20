@@ -125,7 +125,7 @@ export default function MagicLinkForm({
           className="mt-1 h-4 w-4 accent-olive"
         />
         <span className="font-heading text-sm font-light text-dark">
-          Send me occasional notes from sessions.guide. You can change this any
+          Send me occasional notes from guides’space. You can change this any
           time.
         </span>
       </label>

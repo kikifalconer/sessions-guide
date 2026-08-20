@@ -7,7 +7,7 @@ import SiteHeader from '@/components/site-header'
 import DashboardShell from './DashboardShell'
 
 export const metadata = {
-  title: 'dashboard | sessions.guide',
+  title: 'dashboard | guides’space',
 }
 
 export default async function DashboardPage() {

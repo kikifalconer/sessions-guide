@@ -329,7 +329,7 @@ export default function BookingFlow(props: Props) {
             {bookedFormat === 'virtual' ? 'Virtual' : `In person${city ? ` in ${city}` : ''}`}
           </p>
           <p className="mb-6">
-            Booking uses your sessions.guide account. Enter your email and we
+            Booking uses your guides’space account. Enter your email and we
             will send you a sign in link. Your selected time is kept for when
             you return.
           </p>

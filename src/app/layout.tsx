@@ -6,7 +6,7 @@ import { JsonLd, organizationJsonLd, webSiteJsonLd } from "@/lib/seo/structuredD
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: "sessions.guide",
+  title: "guides’space",
   description: "Find a practitioner who actually gets it.",
 };
 

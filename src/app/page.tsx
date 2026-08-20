@@ -28,12 +28,12 @@ const META_DESCRIPTION =
 // COPY NEEDED: page title concept for /.
 //
 // Every other route sets a lowercase concept and buildMetadata appends the
-// brand ("{concept} | sessions.guide"). No approved string exists for this
+// brand ("{concept} | guides’space"). No approved string exists for this
 // one: per the landing copy deck, the page title cascades from the A1 hero
 // candidate, which is still undecided. Rather than invent brand copy, the
 // title is pinned to exactly what / emits today. Replace the override below
 // with a real `concept` once A1 lands.
-const INTERIM_TITLE = 'sessions.guide'
+const INTERIM_TITLE = 'guides’space'
 
 // SCAFFOLDING, NOT COPY. Deliberately unshippable text, at the shape the real
 // line is expected to take (5 words, wrapping to 2-3 lines at desktop), so the
@@ -88,7 +88,7 @@ export default function LandingPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/guidesspace-logo-cream.png"
-            alt="Guides' Space"
+            alt="guides’space"
             className="relative z-[1] block w-full"
           />
 
@@ -136,7 +136,7 @@ export default function LandingPage() {
                   their work was unique, their challenges were common.
                 </p>
                 <p className="t-body text-dark">
-                  Sessions Guide was created for the light workers: so they can receive
+                  guides’space was created for the light workers: so they can receive
                   the abundance they deserve while having sovereignty over how they get
                   paid. So healers can focus on their energy rather than admin. And so
                   nomads won&rsquo;t need to rebuild their client list with each new place
@@ -144,7 +144,7 @@ export default function LandingPage() {
                   their practice.
                 </p>
                 <p className="t-body text-dark">
-                  And Sessions Guide was created so people seeking healing will find their
+                  And guides’space was created so people seeking healing will find their
                   healers. Those seeking guidance will find their guides. And those
                   seeking transformation can find their alchemist.
                 </p>

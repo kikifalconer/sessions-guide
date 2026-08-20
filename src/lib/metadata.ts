@@ -9,14 +9,14 @@ import { getSiteUrl } from '@/lib/siteUrl'
  * drift route to route.
  *
  * Title rule: one pipe, brand as suffix, lowercase throughout.
- *   {concept} | sessions.guide
+ *   {concept} | guides’space
  * Never two pipes. Never a dash of any kind.
  *
  * The host comes from getSiteUrl() rather than a literal, so canonicals can
  * never drift from the origin the rest of the app uses for email links.
  */
 
-export const SITE_NAME = 'sessions.guide'
+export const SITE_NAME = 'guides’space'
 export const TITLE_SEPARATOR = ' | '
 
 /** Titles longer than this get truncated in search results. */

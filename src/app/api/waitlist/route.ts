@@ -8,7 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export const runtime = 'nodejs'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const NOTIFY_TO = 'hello@sessions.guide'
+const NOTIFY_TO = 'hello@guidesspace.com'
 
 export async function POST(req: NextRequest) {
   let body: unknown

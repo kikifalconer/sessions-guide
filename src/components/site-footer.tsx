@@ -18,7 +18,7 @@ export default function SiteFooter() {
           {/* Cream mark: light lettering, for the olive footer field. */}
           <Image
             src="/guidesspace-logo-cream.png"
-            alt="Guides' Space"
+            alt="guides’space"
             width={221}
             height={31}
             className="mb-2"

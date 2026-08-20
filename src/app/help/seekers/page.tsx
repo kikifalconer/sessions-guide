@@ -1,7 +1,7 @@
 // COPY: placeholder, pending rework
 import FaqPage, { type FaqGroup } from '../FaqPage'
 
-export const metadata = { title: 'help for seekers | sessions.guide' }
+export const metadata = { title: 'help for seekers | guides’space' }
 
 const GROUPS: FaqGroup[] = [
   {
