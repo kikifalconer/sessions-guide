@@ -15,10 +15,11 @@ export default function SiteFooter() {
       <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-12 px-6 py-20 sm:grid-cols-3 sm:px-10">
         {/* Column one — mark + platform story */}
         <div className="flex flex-col items-start gap-5">
+          {/* Cream mark: light lettering, for the olive footer field. */}
           <Image
-            src="/sessions-logo-light.svg"
-            alt="Sessions Guide"
-            width={150}
+            src="/guidesspace-logo-cream.png"
+            alt="Guides' Space"
+            width={221}
             height={31}
             className="mb-2"
           />

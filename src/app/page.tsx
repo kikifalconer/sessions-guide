@@ -81,11 +81,14 @@ export default function LandingPage() {
           {/* Legibility wash over the photograph. */}
           <div className="absolute inset-0 bg-black/25" />
 
-          {/* Full-width wordmark, flush to the very top: no padding, no margin. */}
+          {/* Full-width wordmark, flush to the very top: no padding, no margin.
+              Cream mark over the photograph. Raw <img> rather than next/image
+              because it spans the full viewport at its natural aspect; the
+              7689px source is far wider than any viewport, so it stays crisp. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/sessionsguide-logo-light.svg"
-            alt="Sessions Guide"
+            src="/guidesspace-logo-cream.png"
+            alt="Guides' Space"
             className="relative z-[1] block w-full"
           />
 
