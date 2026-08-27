@@ -9,6 +9,7 @@ import RevealLines from '@/components/motion/RevealLines'
 import RevealBlock from '@/components/motion/RevealBlock'
 import ScrubScale from '@/components/motion/ScrubScale'
 import StickyStack from '@/components/motion/StickyStack'
+import JoinForms from './JoinForms'
 
 // Practitioner-facing invitation page. The copy is authored and final; this
 // file is the layout for it, not a place to rewrite it.
@@ -31,18 +32,12 @@ import StickyStack from '@/components/motion/StickyStack'
 export const metadata = buildMetadata({
   concept: 'list your practice',
   description:
-    'Built for practitioners of the healing arts: coaches, astrologers, facilitators, and more. Set your own rates, hours, and terms. No commission, ever.',
-  path: '/join-sessions',
+    'Built for guides of the healing arts: coaches, astrologers, facilitators, and more. Set your own rates, hours, and terms. No commission, ever.',
+  path: '/join-guidesspace',
 })
 
-// The invitation mechanism is not decided yet (form vs. waitlist vs. something
-// else). This mailto is a placeholder, pointing at the address /contact and
-// /privacy already publish. Swap this one constant when the mechanism lands.
-const REQUEST_INVITATION_HREF =
-  'mailto:hello@guidesspace.com?subject=Invitation%20request'
-
 const HERO = {
-  eyebrow: 'for practitioners of the healing arts',
+  eyebrow: 'for guides of the healing arts',
   h1: 'you hold the container. we hold the rest.',
   subhead:
     'guides’space was built around your practice, not the other way around: room to work in alignment with why you began, and less time lost to the admin that pulls you away from it.',
@@ -51,7 +46,7 @@ const HERO = {
 
 const ORIGIN = {
   heading: 'Designed alongside the people who do this work',
-  body: 'guides’space was built from a decade of experience working with thousands* of practitioners, healers, teachers, and guides. And though their work was unique, their challenges were common. What we learned, again and again, is that most tools ask you to shrink your practice to fit a template built for something else entirely. So we built one around the work itself, not despite it.',
+  body: 'guides’space was built from a decade of experience working with thousands* of healers, teachers, and guides. And though their work was unique, their challenges were common. What we learned, again and again, is that most tools ask you to shrink your practice to fit a template built for something else entirely. So we built one around the work itself, not despite it.',
   footnote:
     '*literally, 2740+ coaches, doulas, sound healers, astrologers, feng shui designers, equine therapists, etc. while co-creating Conscious City Guide',
   close:
@@ -139,7 +134,7 @@ const CLOSE = {
   first: 'This is where your practice, your purpose, and your power meet.',
   second:
     'If the way you work has never quite fit the tools you were handed, we would love for you to see this one.',
-  note: "guides’space is invitation-only right now, while we grow alongside a small group of practitioners. That's temporary. We're building toward an open platform, anchored by real reviews, and invitations will widen as that foundation grows stronger.",
+  note: "guides’space is invitation-only right now, while we grow alongside a small group of guides. That's temporary. We're building toward an open platform, anchored by real reviews, and invitations will widen as that foundation grows stronger.",
 }
 
 // Single source for both the rendered FAQ and the FAQPage JSON-LD. Plain
@@ -200,7 +195,7 @@ const FAQ: { question: string; answer: string }[] = [
 
 export default function JoinSessionsPage() {
   const faqSeo = faqPageJsonLd({
-    url: `${getSiteUrl()}/join-sessions`,
+    url: `${getSiteUrl()}/join-guidesspace`,
     items: FAQ,
   })
 
@@ -244,18 +239,14 @@ export default function JoinSessionsPage() {
               <p className="t-lede mx-auto mt-10 text-light">{HERO.subhead}</p>
             </RevealBlock>
 
-            <RevealBlock
-              stagger="loose"
-              delay={0.45}
-              className="mt-14 flex flex-col items-center justify-center gap-6 sm:flex-row"
-            >
-              <a href={REQUEST_INVITATION_HREF} className="btn-primary btn-fill">
-                Request an invitation
-              </a>
-              <a href="#how-it-works" className="link-wipe t-eyebrow text-light">
-                See how it works
-              </a>
-            </RevealBlock>
+            <div id="request-invitation" className="mx-auto mt-14 flex flex-col items-center gap-8">
+              <JoinForms delay={0.45} />
+              <RevealBlock delay={0.55}>
+                <a href="#how-it-works" className="link-wipe t-eyebrow text-light">
+                  See how it works
+                </a>
+              </RevealBlock>
+            </div>
           </div>
         </section>
 
@@ -414,10 +405,10 @@ export default function JoinSessionsPage() {
 
             <RevealBlock delay={0.2}>
               <a
-                href={REQUEST_INVITATION_HREF}
+                href="#request-invitation"
                 className="btn-secondary btn-fill mt-14 border-light text-light"
               >
-                Request an invitation
+                Already invited? Enter your code above ↑
               </a>
             </RevealBlock>
 
@@ -437,7 +428,7 @@ export default function JoinSessionsPage() {
         <section className="border-t border-border">
           <div className="redesign-container redesign-section">
             <RevealLines as="h2" className="t-h2 mb-16">
-              Questions practitioners ask
+              Questions guides ask
             </RevealLines>
 
             <RevealBlock stagger="tight">

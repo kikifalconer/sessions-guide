@@ -6,7 +6,7 @@ import MotionProvider from '@/components/motion/MotionProvider'
 import RevealLines from '@/components/motion/RevealLines'
 import RevealBlock from '@/components/motion/RevealBlock'
 import ScrubScale from '@/components/motion/ScrubScale'
-import HoldingForms from './HoldingForms'
+import JoinForms from './join-guidesspace/JoinForms'
 
 // Holding page. Header-free by design (decisions.md, Shared Site Header): the
 // root layout injects no header and the full-width wordmark is the top of the
@@ -87,7 +87,7 @@ export default function LandingPage() {
               7689px source is far wider than any viewport, so it stays crisp. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/guidesspace-logo-cream.png"
+            src="/guidesspace-logo-cream.gif"
             alt="guides’space"
             className="relative z-[1] block w-full"
           />
@@ -105,7 +105,7 @@ export default function LandingPage() {
               </p>
             </RevealBlock>
 
-            <HoldingForms delay={0.5} />
+            <JoinForms delay={0.5} />
           </div>
         </section>
 

@@ -4,8 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import RevealBlock from '@/components/motion/RevealBlock'
 
-// The two forms from the holding page, split out so that src/app/page.tsx can
-// be a server component and export metadata (a 'use client' page cannot).
+// The waitlist + invite-code forms, relocated here from the holding page
+// (formerly src/app/HoldingForms.tsx) now that the invitation mechanism has
+// a home on this page. Split out so ./page.tsx can stay a server component
+// and export metadata (a 'use client' page cannot).
 //
 // Behaviour is frozen: same endpoints, same state machines, same button label
 // swaps, same success and failure strings. The restyle touches presentation
@@ -21,7 +23,7 @@ import RevealBlock from '@/components/motion/RevealBlock'
 const FIELD =
   'w-full border border-border bg-surface px-4 py-3 font-ui text-body tracking-[0.04em] text-dark outline-none transition-colors focus:border-olive focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-olive'
 
-export default function HoldingForms({ delay = 0 }: { delay?: number }) {
+export default function JoinForms({ delay = 0 }: { delay?: number }) {
   const router = useRouter()
 
   const [email, setEmail] = useState('')
