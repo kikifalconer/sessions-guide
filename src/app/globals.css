@@ -536,12 +536,6 @@ p {
           mask: url('/x.svg') center / contain no-repeat;
 }
 
-/* Light variants — for the transparent landing header sitting over a photo. */
-.hamburger-icon--light,
-.menu-close-icon--light {
-  background-color: var(--color-cream);
-}
-
 /* Holding page modality list — DM Mono, subordinate to the heading. */
 .modality-list {
   font-family: var(--font-ui);

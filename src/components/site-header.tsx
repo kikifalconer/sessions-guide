@@ -61,17 +61,15 @@ export default async function SiteHeader({
   }
 
   if (variant === 'landing') {
+    // Pixel-sampled from the mockup: this nav sits on a flat bone bar above
+    // the hero photo (not transparent over it), with the same olive-on-bone
+    // treatment as the default header — only the wordmark (omitted; the hero
+    // image below carries it) and the centering are different.
     const links = LANDING_LINKS.filter((l) => l.live)
     return (
-      <header className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-transparent px-3 py-4 sm:px-6 sm:py-5">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-bg px-3 py-4 sm:px-6 sm:py-5">
         <div />
-        <HeaderNav
-          links={links}
-          authSlot={authSlot}
-          alwaysHamburger={false}
-          theme="light"
-          centered
-        />
+        <HeaderNav links={links} authSlot={authSlot} alwaysHamburger={false} centered />
         <div />
       </header>
     )
