@@ -595,3 +595,49 @@ jurisdictions.
 and future per-practitioner no-show counts on the client record (visible only
 to that practitioner). Platform-internal abuse signals, if ever built, are
 ops-only and never surfaced.
+
+---
+
+## Landing page rebuild + /join-sessions rename (August 2026)
+
+**Decision:** `/` was rebuilt from `docs/mockups/landing page@2x.png` on
+`redesign/phase-1-motion-system`. Four things worth a durable record:
+
+**1. `/` is no longer header-free.** The prior "Shared Site Header" entry
+(June 2026) chose to keep `/` header-free specifically to avoid forcing the
+route dynamic (`SiteHeader` calls Supabase `getUser()`). The new mockup has
+a nav bar over the hero, so `/` now renders `<SiteHeader variant="landing" />`
+and accepts the same dynamic-route tradeoff every other `SiteHeader` page
+already does. That June entry is superseded on this point only — nothing
+else in it changes.
+
+**2. `/join-sessions` is renamed `/join-guidesspace`,** and the waitlist +
+invite-code capture (formerly `HoldingForms` on `/`) moved there as
+`JoinForms`, replacing the page's two "Request an invitation" mailto CTAs
+(which were explicitly marked as a placeholder pending a real mechanism).
+No redirect from the old path exists yet — there's no live traffic to
+preserve pre-launch, but whoever deploys this rename first should add one.
+`RESERVED_SLUGS` in `src/lib/slug.ts` keeps both `join-sessions` and
+`join-guidesspace` reserved.
+
+**3. BRAND-13 (`src/lib/brand.ts`) is partially complete.** It's the source
+of truth for `BRAND_NAME`/`BRAND_NAME_HTML`/`BRAND_DOMAIN`/
+`BRAND_EMAIL_DOMAIN`, used in every file this rebuild touched. It was **not**
+retrofitted into the ~30 other files that still hand-type "guides’space"
+today (`src/app/layout.tsx`, `src/lib/metadata.ts`,
+`src/lib/seo/structuredData.tsx`, most route `page.tsx` files, etc. — run
+`grep -rln "guides['’]space" src/ --include=*.tsx --include=*.ts` for the
+live list). That retrofit is a separate, not-yet-scheduled pass.
+
+**4. Terminology clarified: "guide" is the brand's primary term for
+practitioners; "practitioner" remains an acceptable synonym in copy.** This
+is narrower than it might look next to the "Terminology — curator role is
+Sage" entry above — that entry is about the **curator/Sage role noun**
+specifically ("Guide" must not be used for a Sage, to avoid "a Guide on
+Guides' Space"). It does not forbid using "guide" for the general
+practice-running population. Applied this pass: `/join-guidesspace`'s meta
+description, hero eyebrow, origin body, close note, and FAQ heading
+(practitioner → guide, 5 instances), and the new landing page's mission
+section ("conscious practitioners" → "conscious guides"). Both pages still
+say "practitioner" elsewhere (e.g. `/join-guidesspace`'s H1 context and
+most of its body copy) — untouched, and that's fine per this entry.
