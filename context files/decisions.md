@@ -641,3 +641,12 @@ description, hero eyebrow, origin body, close note, and FAQ heading
 section ("conscious practitioners" → "conscious guides"). Both pages still
 say "practitioner" elsewhere (e.g. `/join-guidesspace`'s H1 context and
 most of its body copy) — untouched, and that's fine per this entry.
+
+---
+
+## Rebrand tracking moved to a dedicated register (August 2026)
+
+BRAND-n items (rebrand constants, route renames, lexicon) are now tracked in
+`docs/rebrand-migration.md`, not here. Standalone audit findings go in
+`docs/audit-findings.md`. This entry is a pointer only — no existing content
+above has moved or been edited.
