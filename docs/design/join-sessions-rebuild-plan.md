@@ -3,6 +3,12 @@
 Against **Page 3** of `~/Downloads/sessions-guide-three-page-copy-deck.md`, with
 `brand-voice.md` and [`design-system.md`](./design-system.md).
 
+> **ROUTE RENAMED (2026-08-27).** The canonical route is now
+> `/join-guidesspace`. Every file-path and route reference below reading
+> `/join-sessions` or `src/app/join-sessions/` is stale — the file lives at
+> `src/app/join-guidesspace/page.tsx`. A permanent redirect from the old path
+> exists in `next.config.ts`. Body left as written; not rewritten.
+
 > **STATUS: §4 of this plan is SUPERSEDED (2026-08-14).**
 >
 > `/join-sessions` has been rebuilt against a newer authoritative copy source,
