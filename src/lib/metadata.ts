@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getSiteUrl } from '@/lib/siteUrl'
+import { BRAND_NAME } from '@/lib/brand'
 
 /**
  * Single source of truth for page metadata.
@@ -9,14 +10,13 @@ import { getSiteUrl } from '@/lib/siteUrl'
  * drift route to route.
  *
  * Title rule: one pipe, brand as suffix, lowercase throughout.
- *   {concept} | guides’space
+ *   {concept} | guides'space
  * Never two pipes. Never a dash of any kind.
  *
  * The host comes from getSiteUrl() rather than a literal, so canonicals can
  * never drift from the origin the rest of the app uses for email links.
  */
 
-export const SITE_NAME = 'guides’space'
 export const TITLE_SEPARATOR = ' | '
 
 /** Titles longer than this get truncated in search results. */
@@ -77,7 +77,7 @@ function validate(meta: PageMeta, title: string): void {
 export function buildMetadata(meta: PageMeta): Metadata {
   const siteUrl = getSiteUrl()
   const path = normalisePath(meta.path)
-  const title = `${meta.concept}${TITLE_SEPARATOR}${SITE_NAME}`
+  const title = `${meta.concept}${TITLE_SEPARATOR}${BRAND_NAME}`
   const canonical = `${siteUrl}${path === '/' ? '' : path}`
 
   validate(meta, title)
@@ -94,7 +94,7 @@ export function buildMetadata(meta: PageMeta): Metadata {
       title,
       description: meta.description,
       url: canonical,
-      siteName: SITE_NAME,
+      siteName: BRAND_NAME,
       type: 'website',
       ...(images ? { images } : {}),
     },
