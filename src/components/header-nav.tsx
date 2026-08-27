@@ -35,10 +35,21 @@ export default function HeaderNav({
   links,
   authSlot,
   alwaysHamburger,
+  theme = 'dark',
+  centered = false,
 }: {
   links: NavLink[]
   authSlot: AuthSlot
   alwaysHamburger: boolean
+  // 'light' is for the transparent landing header sitting over a hero photo.
+  // Only the desktop inline nav and the toggle icon read this — the mobile
+  // full-screen menu overlay is always an opaque bg-bg panel, never over the
+  // photo, so its rows stay dark regardless.
+  theme?: 'dark' | 'light'
+  // Centers the desktop inline nav in its grid cell — only meaningful when
+  // the parent header is a 3-column grid (the landing variant); a no-op
+  // grid-placement class in any flex-based parent.
+  centered?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
@@ -120,35 +131,30 @@ export default function HeaderNav({
     </Link>
   )
 
+  const linkClass =
+    theme === 'light'
+      ? 'text-cream transition-colors hover:text-light'
+      : 'text-dark transition-colors hover:text-olive'
+  const navCenteredClass = centered ? 'md:col-start-2 md:justify-self-center' : ''
+  const toggleCenteredClass = centered ? 'md:col-start-3 md:justify-self-end' : ''
+
   return (
     <>
       {/* Desktop inline links — regular mode only */}
       {!alwaysHamburger && (
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className={`hidden items-center gap-8 md:flex ${navCenteredClass}`}>
           {links.map((l) =>
             l.label === 'SEARCH' ? (
-              <Link
-                key={l.href}
-                href={l.href}
-                aria-label="Search"
-                className="text-dark transition-colors hover:text-olive"
-              >
+              <Link key={l.href} href={l.href} aria-label="Search" className={linkClass}>
                 <SearchIcon />
               </Link>
             ) : (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="caption text-dark transition-colors hover:text-olive"
-              >
+              <Link key={l.href} href={l.href} className={`caption ${linkClass}`}>
                 {l.label}
               </Link>
             )
           )}
-          <Link
-            href={authSlot.href}
-            className="caption text-dark transition-colors hover:text-olive"
-          >
+          <Link href={authSlot.href} className={`caption ${linkClass}`}>
             {authSlot.label}
           </Link>
         </nav>
@@ -157,7 +163,9 @@ export default function HeaderNav({
       {/* Toggle + menu. The relative wrapper anchors the desktop panel under
           the button; the mobile full-screen overlay uses `fixed` and ignores
           it. Wrapper carries the toggle's visibility. */}
-      <div className={`relative shrink-0 ${alwaysHamburger ? 'block' : 'md:hidden'}`}>
+      <div
+        className={`relative shrink-0 ${alwaysHamburger ? 'block' : 'md:hidden'} ${toggleCenteredClass}`}
+      >
         <button
           ref={toggleRef}
           type="button"
@@ -166,7 +174,10 @@ export default function HeaderNav({
           aria-expanded={open}
           className="block"
         >
-          <span className="hamburger-icon" aria-hidden="true" />
+          <span
+            className={`hamburger-icon ${theme === 'light' ? 'hamburger-icon--light' : ''}`}
+            aria-hidden="true"
+          />
         </button>
 
         {open && (
