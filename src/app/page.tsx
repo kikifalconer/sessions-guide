@@ -58,7 +58,7 @@ export default function LandingPage() {
       <SiteHeader variant="landing" />
 
       <main>
-        {/* ---------- Section 1 — hero photo, wordmark, static modality line ---------- */}
+        {/* ---------- Section 1 — hero photo, wordmark, animated modality gif ---------- */}
         <section className="relative flex min-h-svh flex-col overflow-hidden">
           <div className="absolute inset-0">
             <ScrubScale className="h-full w-full">
@@ -95,15 +95,25 @@ export default function LandingPage() {
               <p className="t-lede text-light">booking for</p>
             </RevealBlock>
 
-            {/* TODO: static placeholder for the eventual rotating modality
-                word (mockup shows "MODALITIES.GIF" as its own placeholder
-                label). Do not build the rotation until the modality list and
-                cadence are specified — see /images/landing/modalities.gif
-                for the reference animation, not embedded here. "reiki" was
-                picked because it matches the hero photo. */}
-            <RevealLines as="h1" className="t-display mt-2 text-light">
-              reiki
-            </RevealLines>
+            {/* Animated modality word. next/image with unoptimized: Next's
+                image optimizer re-encodes GIFs as a static frame, which would
+                kill the animation. Intrinsic 1774x101 (source), rendered at a
+                height clamp matching .t-display's cap height rather than its
+                full font-size clamp — the GIF is cropped tight to the glyphs
+                with little vertical padding, unlike a font's em-box. */}
+            <RevealBlock delay={0.1}>
+              <h1 className="mt-4">
+                <Image
+                  src="/images/landing/modalities.gif"
+                  alt="Rotating list of modalities offered on guides'space: reiki, astrology, breathwork, and more"
+                  width={1774}
+                  height={101}
+                  unoptimized
+                  priority
+                  className="h-[clamp(1.7rem,4.6vw,4.9rem)] w-auto"
+                />
+              </h1>
+            </RevealBlock>
 
             <RevealBlock
               stagger="loose"
@@ -130,21 +140,23 @@ export default function LandingPage() {
               {"Designed to Make Light Workers' Work Lighter"}
             </RevealLines>
 
-            {/* TODO COPY: exact final wording pending BRAND-8/BRAND-10
-                sign-off. BRAND-15 lexicon fix applied: the mockup's "and
-                practitioners of the mystical arts" tail is dropped. */}
+            {/* Verbatim from the mockup. The enumeration form of
+                "practitioners" is explicitly permitted by docs/brand.md's
+                lexicon (unlike a standalone use), so this is not a lexicon
+                violation and isn't touched. */}
             <RevealBlock delay={0.15}>
               <p className="t-lede mx-auto mt-8 max-w-[46ch] text-dark">
-                With tools for guides, healers, and coaches.
+                With tools for guides, healers, coaches, and practitioners of the mystical arts.
               </p>
             </RevealBlock>
 
-            {/* TODO LINK: no existing route is an obvious target for
-                "SEE MORE" — needs a real destination once one exists. */}
+            {/* No route is specified by the mockup for SEE MORE. /pricing
+                chosen as the closest match to "tools for guides..." — flagged
+                to Kiki as an inferred destination, not a mockup-given one. */}
             <RevealBlock delay={0.25}>
-              <a href="#" className="btn-primary btn-fill mt-12">
+              <Link href="/pricing" className="btn-primary btn-fill mt-12">
                 See More
-              </a>
+              </Link>
             </RevealBlock>
           </div>
         </section>
@@ -157,7 +169,8 @@ export default function LandingPage() {
                 {"Created to Find You the Healing + Transformation You're Seeking"}
               </RevealLines>
 
-              {/* TODO COPY: placeholder body, pending BRAND-8/BRAND-10 sign-off. */}
+              {/* Verbatim from the mockup, with the one agreed typo fix:
+                  "transfomratonal" -> "transformational". */}
               <RevealBlock delay={0.15}>
                 <p className="t-body mb-10 text-dark">book healing + transformational sessions</p>
               </RevealBlock>
@@ -208,15 +221,21 @@ export default function LandingPage() {
                 Built to Serve
               </RevealLines>
 
-              {/* BRAND-15 lexicon fix applied: "conscious practitioners" ->
-                  "conscious guides". Condenses the fuller "Built from the
-                  inside" narrative that used to live on this page — the full
-                  version now lives at /mission; this button is the intended
-                  hand-off, not a duplicate. */}
+              {/* Verbatim from the mockup, including "conscious
+                  practitioners" — kept per Kiki, 2026-08-27: this build's
+                  instruction is verbatim mockup copy with two named
+                  exceptions, neither of which is this line. (Elsewhere on
+                  this page "practitioner" only ever appears in the
+                  brand.md-permitted enumeration form; this is the one
+                  standalone use, kept deliberately, not an oversight.)
+                  Condenses the fuller "Built from the inside" narrative that
+                  used to live on this page — the full version now lives at
+                  /mission; this button is the intended hand-off, not a
+                  duplicate. */}
               <RevealBlock delay={0.2}>
                 <p className="t-body mt-6 max-w-[40ch] text-light">
                   By a co-founder of Conscious City Guide, to serve the unique needs of conscious
-                  guides.
+                  practitioners.
                 </p>
               </RevealBlock>
 
