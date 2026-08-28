@@ -120,13 +120,10 @@ export default function LandingPage() {
               delay={0.25}
               className="mt-12 flex flex-col items-center justify-center gap-6 sm:flex-row"
             >
-              <Link href="/explore" className="btn-secondary btn-fill border-light text-light">
+              <Link href="/explore" className="btn-cream">
                 Find Your Guide
               </Link>
-              <Link
-                href="/join-guidesspace"
-                className="btn-secondary btn-fill border-light text-light"
-              >
+              <Link href="/join-guidesspace" className="btn-cream">
                 For Guides
               </Link>
             </RevealBlock>
@@ -240,10 +237,7 @@ export default function LandingPage() {
               </RevealBlock>
 
               <RevealBlock delay={0.35}>
-                <Link
-                  href="/mission"
-                  className="btn-secondary btn-fill mt-10 border-light text-light"
-                >
+                <Link href="/mission" className="btn-cream mt-10">
                   Our Mission
                 </Link>
               </RevealBlock>

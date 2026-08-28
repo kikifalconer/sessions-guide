@@ -449,7 +449,8 @@ p {
 }
 
 .btn-primary,
-.btn-secondary {
+.btn-secondary,
+.btn-cream {
   font-family: var(--font-ui);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -485,19 +486,45 @@ p {
   color: var(--color-light);
 }
 
+/* Solid cream fill, dark text — for buttons sitting directly over a photo,
+   where a transparent/outline treatment (.btn-secondary) or an olive fill
+   close in value to a dark image both read poorly. Not paired with
+   .btn-fill: that class's hover layer is var(--color-olive-hover), which
+   would put dark text on dark olive on hover — bad contrast. Plain
+   background-color hover instead. */
+.btn-cream {
+  background-color: var(--color-cream);
+  color: var(--color-dark);
+  border: 1.5px solid var(--color-cream);
+}
+
+.btn-cream:hover {
+  background-color: var(--color-light);
+  border-color: var(--color-light);
+}
+
 .btn-primary:focus-visible,
 .btn-secondary:focus-visible {
   outline: 2px solid var(--color-olive);
   outline-offset: 3px;
 }
 
+/* Cream button's own focus ring: olive reads poorly over a dark photo,
+   where this variant is always used. */
+.btn-cream:focus-visible {
+  outline: 2px solid var(--color-cream);
+  outline-offset: 3px;
+}
+
 .btn-primary:active,
-.btn-secondary:active {
+.btn-secondary:active,
+.btn-cream:active {
   transform: translateY(1px);
 }
 
 .btn-primary:disabled,
-.btn-secondary:disabled {
+.btn-secondary:disabled,
+.btn-cream:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -512,9 +539,15 @@ p {
   color: var(--color-olive);
 }
 
+.btn-cream:disabled:hover {
+  background-color: var(--color-cream);
+  border-color: var(--color-cream);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .btn-primary,
-  .btn-secondary {
+  .btn-secondary,
+  .btn-cream {
     transition: none;
   }
   .btn-primary:active,
