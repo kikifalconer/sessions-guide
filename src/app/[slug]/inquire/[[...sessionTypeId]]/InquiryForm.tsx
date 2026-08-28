@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { submitInquiry } from './inquiryActions'
 
 const fieldClass =
-  'w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive'
+  'w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive'
 
 // Inquiry form. Submits the slug + optional session id (both server-validated
 // in the action) plus the seeker's name, email, and message.

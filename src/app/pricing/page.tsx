@@ -77,7 +77,7 @@ export default function PricingPage() {
                 }`}
               >
                 <p className="label text-dark">{tier.name}</p>
-                <p className="mt-6 font-heading text-[2rem] font-light text-olive">
+                <p className="mt-6 font-body text-[2rem] font-light text-olive">
                   {tier.price}
                 </p>
                 <p className="mt-3 text-dark">{tier.for}</p>

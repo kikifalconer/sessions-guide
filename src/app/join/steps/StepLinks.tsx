@@ -33,7 +33,7 @@ export default function StepLinks({
   }
 
   const fieldClass =
-    'w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive'
+    'w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive'
 
   return (
     <section>

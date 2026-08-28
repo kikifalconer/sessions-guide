@@ -33,7 +33,7 @@ function PromptCard({ prompt }: { prompt: ReviewPromptView }) {
       <div className="flex items-baseline justify-between gap-4 px-4 py-3">
         <span className="min-w-0">
           <span className="label block text-dark">{prompt.sessionName.toUpperCase()}</span>
-          <span className="mt-1 block font-heading text-sm font-light text-dark">
+          <span className="mt-1 block font-body text-sm font-light text-dark">
             with {prompt.practitionerName},{' '}
             {DateTime.fromISO(prompt.startUtc).toLocal().toFormat('LLLL d, yyyy')}
           </span>
@@ -100,7 +100,7 @@ function PromptCard({ prompt }: { prompt: ReviewPromptView }) {
               onChange={(e) => setBody(e.target.value)}
               rows={4}
               maxLength={2000}
-              className="w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive"
+              className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
             />
           </div>
 
@@ -161,7 +161,7 @@ export default function SeekerReviews({
                       {'★'.repeat(r.rating)}
                       {'☆'.repeat(5 - r.rating)}
                     </span>{' '}
-                    <span className="font-heading text-sm font-light text-dark">
+                    <span className="font-body text-sm font-light text-dark">
                       {r.practitionerName},{' '}
                       {DateTime.fromISO(r.createdAt).toLocal().toFormat('LLLL d, yyyy')}
                     </span>

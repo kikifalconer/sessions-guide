@@ -46,7 +46,7 @@ export default function FaqPage({
         <section className="mx-auto max-w-[1200px] px-6 pb-24">
           {groups.map((g) => (
             <div key={g.id} id={g.id} className="scroll-mt-24 border-t border-border py-14">
-              <h2 className="font-ui mb-8 uppercase tracking-[0.08em] text-dark text-[0.85rem]">
+              <h2 className="font-ui mb-8 tracking-[0.08em] text-dark text-[0.85rem]">
                 {g.title}
               </h2>
               <div className="flex max-w-[70ch] flex-col gap-12">

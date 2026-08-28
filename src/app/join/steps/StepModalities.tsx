@@ -108,7 +108,7 @@ export default function StepModalities({
           }}
           onFocus={() => setListOpen(true)}
           placeholder={atCapacity ? 'Three modalities selected' : 'Search modalities'}
-          className="w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive disabled:opacity-60"
+          className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive disabled:opacity-60"
         />
         {listOpen && !atCapacity && (
           <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto border border-border bg-light">
@@ -124,7 +124,7 @@ export default function StepModalities({
                   onClick={() => select(m.id)}
                   className="flex w-full items-baseline justify-between px-4 py-3 text-left hover:bg-surface"
                 >
-                  <span className="font-heading font-light text-dark">
+                  <span className="font-body font-light text-dark">
                     {m.name}
                   </span>
                   <span className="caption text-dark opacity-60">
@@ -141,7 +141,7 @@ export default function StepModalities({
         <div className="mb-6">
           <p className="label mb-2 text-dark">PRIMARY</p>
           <div className="flex items-center justify-between border border-olive bg-surface px-4 py-3">
-            <span className="font-heading font-light text-dark">
+            <span className="font-body font-light text-dark">
               {primary.name}
             </span>
             <button
@@ -170,7 +170,7 @@ export default function StepModalities({
                   key={id}
                   className="flex items-center justify-between border border-border bg-surface px-4 py-3"
                 >
-                  <span className="font-heading font-light text-dark">
+                  <span className="font-body font-light text-dark">
                     {m.name}
                   </span>
                   <button

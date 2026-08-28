@@ -93,7 +93,7 @@ export default function MagicLinkForm({
           required
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          className="w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive"
+          className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
         />
         <p className="caption mt-2 text-dark/60">
           USED FOR YOUR ACCOUNT IF THIS IS YOUR FIRST SIGN IN
@@ -111,7 +111,7 @@ export default function MagicLinkForm({
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive"
+          className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
         />
       </div>
 
@@ -124,7 +124,7 @@ export default function MagicLinkForm({
           onChange={(e) => setNewsletter(e.target.checked)}
           className="mt-1 h-4 w-4 accent-olive"
         />
-        <span className="font-heading text-sm font-light text-dark">
+        <span className="font-body text-sm font-light text-dark">
           Send me occasional notes from guides’space. You can change this any
           time.
         </span>

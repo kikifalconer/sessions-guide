@@ -86,7 +86,7 @@ export default function StepAccount({
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive"
+            className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
           />
         </div>
 
@@ -102,7 +102,7 @@ export default function StepAccount({
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive"
+            className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
           />
         </div>
 

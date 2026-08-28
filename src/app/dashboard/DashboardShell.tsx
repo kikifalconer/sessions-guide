@@ -104,12 +104,9 @@ export default function DashboardShell({
                     : 'border-l-2 border-transparent'
                 }`}
               >
-                {/* Sidebar links render as h3 elements; uppercase is applied via
-                    the explicitly-requested inline textTransform override. */}
-                <h3
-                  style={{ textTransform: 'uppercase' }}
-                  className={isActive ? 'text-olive' : 'text-dark'}
-                >
+                {/* Sidebar links render as h3 elements; uppercase comes from
+                    the base h1,h2,h3 rule in globals.css. */}
+                <h3 className={isActive ? 'text-olive' : 'text-dark'}>
                   {section}
                 </h3>
               </button>

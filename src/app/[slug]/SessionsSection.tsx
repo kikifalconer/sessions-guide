@@ -24,7 +24,7 @@ export default function SessionsSection({
 }) {
   return (
     <section className="mx-auto w-full max-w-[1200px] border-t border-border px-6 py-14">
-      <h3 className="text-center uppercase">{`${practitionerName}'s`}</h3>
+      <h3 className="text-center">{`${practitionerName}'s`}</h3>
 
       <div className="mt-1 flex justify-center">
         <Image

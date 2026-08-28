@@ -97,7 +97,7 @@ export default async function SiteHeader({
         {centerLabel && (
           <>
             <Image src="/x.svg" alt="" width={28} height={28} className="shrink-0" />
-            <span className="min-w-0 truncate font-heading text-[16px] font-thin uppercase leading-none text-olive sm:text-[24px] md:text-[34px]">
+            <span className="min-w-0 truncate font-body text-[16px] font-thin uppercase leading-none text-olive sm:text-[24px] md:text-[34px]">
               {centerLabel}
             </span>
           </>

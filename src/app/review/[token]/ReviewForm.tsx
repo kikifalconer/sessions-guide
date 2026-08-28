@@ -93,7 +93,7 @@ export default function ReviewForm({
           onChange={(e) => setBody(e.target.value)}
           rows={5}
           maxLength={2000}
-          className="w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive"
+          className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
         />
       </div>
 

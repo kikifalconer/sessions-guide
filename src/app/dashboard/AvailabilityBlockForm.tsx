@@ -27,7 +27,7 @@ export type AvailabilityBlockRow = {
 }
 
 const FIELD =
-  'w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive'
+  'w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive'
 
 const FORMAT_LABEL: Record<string, string> = {
   virtual: 'Virtual',
@@ -246,7 +246,7 @@ export default function AvailabilityBlockForm({
             <p className="label mb-2 text-dark">LOCATION</p>
             {placeId && display ? (
               <div className="flex items-center justify-between border border-olive bg-surface px-4 py-3">
-                <span className="font-heading font-light text-dark">{display}</span>
+                <span className="font-body font-light text-dark">{display}</span>
                 <button type="button" onClick={clearLocation} className="caption text-olive">
                   CHANGE
                 </button>
@@ -268,7 +268,7 @@ export default function AvailabilityBlockForm({
                         <button
                           type="button"
                           onClick={() => selectPlace(p)}
-                          className="block w-full px-4 py-3 text-left font-heading font-light text-dark hover:bg-surface"
+                          className="block w-full px-4 py-3 text-left font-body font-light text-dark hover:bg-surface"
                         >
                           {p.description}
                         </button>

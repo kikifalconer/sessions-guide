@@ -63,7 +63,7 @@ type Props = {
 type Step = 'time' | 'format' | 'signin' | 'details' | 'payment' | 'done'
 
 const fieldClass =
-  'w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive'
+  'w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive'
 
 function priceLabel(st: SessionTypeView): string | null {
   if (st.pricingModel === 'fixed' && st.price) return `$${st.price.toFixed(2)}`

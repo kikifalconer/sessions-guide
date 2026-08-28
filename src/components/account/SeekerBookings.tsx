@@ -116,7 +116,7 @@ function BookingCard({ booking }: { booking: SeekerBookingView }) {
       >
         <span className="min-w-0">
           <span className="label block text-dark">{booking.sessionName.toUpperCase()}</span>
-          <span className="mt-1 block font-heading text-sm font-light text-dark">
+          <span className="mt-1 block font-body text-sm font-light text-dark">
             {whenLocal(booking.startUtc)} with {booking.practitionerName}
           </span>
         </span>

@@ -42,7 +42,7 @@ export type PractitionerDefaults = {
 }
 
 const FIELD =
-  'w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive'
+  'w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive'
 
 const FORMAT_LABEL: Record<string, string> = {
   virtual: 'Virtual',
@@ -309,7 +309,7 @@ export default function SessionTypeForm({
           <p className="label mb-2 text-dark">MODALITY</p>
           {selectedModality && !picking ? (
             <div className="flex items-center justify-between border border-olive bg-surface px-4 py-3">
-              <span className="font-heading font-light text-dark">
+              <span className="font-body font-light text-dark">
                 {selectedModality.name}
               </span>
               <button
@@ -342,7 +342,7 @@ export default function SessionTypeForm({
                       onClick={() => selectModality(m.id)}
                       className="flex w-full items-baseline justify-between px-4 py-3 text-left hover:bg-surface"
                     >
-                      <span className="font-heading font-light text-dark">{m.name}</span>
+                      <span className="font-body font-light text-dark">{m.name}</span>
                       <span className="caption text-dark opacity-60">
                         {tagged.has(m.id) ? 'ON YOUR PROFILE' : m.category}
                       </span>

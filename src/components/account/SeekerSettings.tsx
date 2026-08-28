@@ -11,7 +11,7 @@ import { updateSeekerSettings } from '@/app/account/actions'
 // All copy is PLACEHOLDER — Kiki to review.
 
 const fieldClass =
-  'w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive'
+  'w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive'
 
 export default function SeekerSettings({
   initialFullName,
@@ -95,7 +95,7 @@ export default function SeekerSettings({
             onChange={(e) => setNewsletter(e.target.checked)}
             className="mt-1 h-4 w-4 accent-olive"
           />
-          <span className="font-heading text-sm font-light text-dark">
+          <span className="font-body text-sm font-light text-dark">
             Send me occasional notes from guides’space.
           </span>
         </label>
