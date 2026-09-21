@@ -332,7 +332,7 @@ The Google Calendar connect flow (`/api/google/connect` → OAuth consent → ca
 
 Consequence: minor UX gap, not a functional one. A practitioner who connects will not see confirmation until they navigate to SETTINGS. No data or sync impact.
 
-Fix: requires making the dashboard tabs URL-driven (today they are client-side `useState` toggles in `DashboardShell.tsx`) so the callback can redirect to a SETTINGS URL. Deliberately out of scope when the SETTINGS connect/disconnect panel was built. Low priority, cosmetic. Lives in the deferred-UI pile alongside the no-shareable-confirmation-page and on-screen-self-cancel items (D1).
+Fix: the dashboard tabs are URL-driven now — real routes, not the client-side `useState` toggles in `DashboardShell.tsx` this note originally described (that file no longer exists). The calendar panel lives on `/dashboard/account` today (folded in when PROFILE became ACCOUNT). Remaining question: the callback (`src/app/api/google/callback/route.ts`) still redirects to `/dashboard/profile`, which itself now redirects to `/dashboard/account` — the flow resolves, just via one extra hop. The hardcoded target should point at `/dashboard/account` directly. Low priority, cosmetic. Lives in the deferred-UI pile alongside the no-shareable-confirmation-page and on-screen-self-cancel items (D1).
 
 ## TD3 — Public discovery reads bypass RLS (service-role, no anon policy) (June 2026)
 

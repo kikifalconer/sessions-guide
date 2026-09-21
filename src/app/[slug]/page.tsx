@@ -133,6 +133,31 @@ export default async function PractitionerProfilePage({
   const isOwner = user?.id === profile.id
   if (!profile.is_published && !isOwner) notFound()
 
+  // The heart renders for every visitor except the owner (a guide can't
+  // favorite their own profile) -- including signed-out visitors, whose
+  // click routes through /login and resumes the save on return (D20: never
+  // a browse wall). initialSaved only has a real value to look up once a
+  // user is signed in.
+  let initialSaved = false
+  if (user && !isOwner) {
+    const admin = createAdminClient()
+    const { data: favoriteRow } = await admin
+      .from('favorites')
+      .select('seeker_id')
+      .eq('seeker_id', user.id)
+      .eq('practitioner_id', profile.id)
+      .maybeSingle()
+    initialSaved = Boolean(favoriteRow)
+  }
+  const favorite = isOwner
+    ? null
+    : {
+        practitionerId: profile.id,
+        initialSaved,
+        isSignedIn: Boolean(user),
+        profilePath: `/${profile.slug}`,
+      }
+
   const sortedModalities = [...profile.practitioner_modalities].sort(
     (a, b) => Number(b.is_primary) - Number(a.is_primary)
   )
@@ -246,6 +271,7 @@ export default async function PractitionerProfilePage({
         name={profile.full_name}
         tagline={profile.tagline}
         bannerUrl={profile.banner_url}
+        favorite={favorite}
       />
 
       <InfoStrip

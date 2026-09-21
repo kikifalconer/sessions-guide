@@ -6,9 +6,10 @@ import SeekerReviews from '@/components/account/SeekerReviews'
 import SeekerSettings from '@/components/account/SeekerSettings'
 import type { SeekerData } from '@/lib/seekerData'
 
-// Seeker dashboard shell (D20): BOOKINGS, REVIEWS, SETTINGS. Mirrors the
-// practitioner DashboardShell pattern — client-side tab state, DM Mono
-// uppercase sidebar, shared section components.
+// Seeker dashboard shell (D20): BOOKINGS, REVIEWS, SETTINGS. Client-side tab
+// state, uppercase sidebar, shared section components. The practitioner
+// dashboard used to follow this same pattern (DashboardShell.tsx) but moved
+// to real routes per URL in D28; this seeker-side shell is unaffected.
 
 const SECTIONS = ['BOOKINGS', 'REVIEWS', 'SETTINGS'] as const
 

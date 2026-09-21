@@ -75,7 +75,13 @@ export default async function SiteHeader({
     )
   }
 
-  const links = LINKS.filter((l) => l.live)
+  // FAVORITES only for a signed-in visitor (guides see it too -- they are
+  // valid seekers of other guides), placed immediately before the auth slot.
+  // Scoped to the default header only, not the landing variant's separate
+  // marketing nav.
+  const links = user
+    ? [...LINKS.filter((l) => l.live), { label: 'FAVORITES', href: '/account/favorites', live: true }]
+    : LINKS.filter((l) => l.live)
 
   return (
     <header className="flex items-center justify-between gap-2 bg-bg px-3 py-4 sm:px-6 sm:py-5">

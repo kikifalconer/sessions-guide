@@ -34,7 +34,7 @@ export default function ContactPage() {
                 hello@guidesspace.com
               </a>
               <a
-                href="https://instagram.com/sessionsguide"
+                href="https://instagram.com/guidesspace"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-dark underline underline-offset-4 hover:text-olive"

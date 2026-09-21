@@ -278,7 +278,7 @@ and a second for the header. Tablet (640-1024px) gets the desktop treatment.
 | **SeekerBookings / SeekerReviews / SeekerSettings** | `account/` | client | `/account`, dashboard MY SESSIONS tab |
 
 **SiteHeader consumers (23):** `contact`, `privacy`, `join-sessions`, `in/[city]`,
-`terms`, `mission`, `explore`, `explore/[category]`, `search`, `dashboard` (+ `DashboardShell`,
+`terms`, `mission`, `explore`, `explore/[category]`, `search`, `dashboard` (+
 `admin/pages` ×3, `billing`), `guides/[slug]`, `account`, `pricing`, `[slug]`,
 `[slug]/reviews`, `sages/[slug]`, `help`, `help/FaqPage`.
 
@@ -406,7 +406,6 @@ all six semantic colors + `hero-overlay`; the three font families.
 | `explore/[category]/page.tsx:170` | `color: var(--color-light)` | Same |
 | `[slug]/ProfileHero.tsx:32` | `color: var(--color-light)` | Same |
 | `components/pages/PageHero.tsx:29` | `color: var(--color-light)` | Same |
-| `dashboard/DashboardShell.tsx:110` | `textTransform: uppercase` | Beat a competing rule |
 | `account/AccountShell.tsx:61` | `textTransform: uppercase` | Same |
 | `dashboard/admin/pages/page.tsx:58` | `letterSpacing: 0.04em` | No tracking token |
 | `dashboard/billing/BillingClient.tsx:153,231,268` | `letterSpacing: 0.04-0.06em` | Same |

@@ -1,5 +1,9 @@
 # sessions.guide — Claude Code Context
 
+> **SUPERSEDED 2026-09-17.** The auto-loaded project context is now
+> the root `CLAUDE.md`. This file is retained for history only.
+> Do not read it for current project rules.
+
 ## Project
 Two-sided marketplace for transformational wellness practitioners and seekers.
 Next.js App Router + TypeScript + Tailwind + Supabase + Stripe + Cloudinary.
@@ -63,6 +67,13 @@ const supabase = createClient(
 )
 ```
 Always use the regular server client solely to retrieve `user.id`, then pass that ID to service role operations.
+
+- Indexes, constraints and RLS state are NOT visible through the
+  service-role client — it only exposes .from(table).select(), not
+  pg_catalog. Verifying that a migration's index or constraint
+  actually applied requires the Supabase SQL editor. Ask Kiki to run
+  the query; never report an index as unconfirmable without asking,
+  and never assume it applied because the migration file exists.
 
 ---
 

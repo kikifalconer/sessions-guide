@@ -76,19 +76,23 @@ export default function LandingPage() {
           {/* Legibility wash over the photograph. */}
           <div className="absolute inset-0 bg-black/25" />
 
-          {/* Full-width wordmark, flush to the top of the hero photo. Raw
-              <img> rather than next/image because it spans the full viewport
-              at its natural aspect and needs its native GIF animation, which
-              next/image doesn't preserve. The repo-root /guidesspace-logo-cream.gif
-              path referenced here previously 404s (only the .png variant
-              exists at root); this is the only place the actual .gif file
-              lives. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/images/landing/guidesspace-logo-cream.gif"
-            alt={BRAND_NAME}
-            className="relative z-[1] block w-full"
-          />
+          {/* Full-width wordmark. Raw <img> rather than next/image because it
+              spans the full viewport at its natural aspect and needs its
+              native GIF animation, which next/image doesn't preserve. The
+              repo-root /guidesspace-logo-cream.gif path referenced here
+              previously 404s (only the .png variant exists at root); this is
+              the only place the actual .gif file lives. px-3 pt-3 sm:px-6
+              sm:pt-6 matches SiteHeader's own padding (site-header.tsx) and
+              the same fix applied to the category-page hero wordmarks, so
+              this one is no longer flush to the hero's top/side edges either. */}
+          <div className="relative z-[1] px-3 pt-3 sm:px-6 sm:pt-6">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/landing/guidesspace-logo-cream.gif"
+              alt={BRAND_NAME}
+              className="block w-full"
+            />
+          </div>
 
           <div className="redesign-container relative z-[1] flex flex-1 flex-col items-center justify-center py-16 text-center">
             <RevealBlock>
@@ -160,8 +164,13 @@ export default function LandingPage() {
 
         {/* ---------- Section 3 — split copy / image, curved divider ---------- */}
         <section className="bg-bg">
-          <div className="redesign-container redesign-section grid grid-cols-1 items-center gap-16 md:grid-cols-12">
-            <div className="min-w-0 md:col-span-5">
+          {/* No redesign-container here: the image half breaks out to the full
+              viewport edge (matches the hero photo's own full-bleed treatment)
+              instead of stopping at the site's 1440px content column. The text
+              half carries its own gutter/section padding directly so it still
+              reads at the same inset as every other section. */}
+          <div className="flex flex-col md:flex-row md:items-center">
+            <div className="min-w-0 px-[var(--spacing-gutter)] py-[var(--spacing-section)] md:w-1/2">
               <RevealLines as="h2" className="t-h2 mb-8 max-w-[16ch] break-words">
                 {"Created to Find You the Healing + Transformation You're Seeking"}
               </RevealLines>
@@ -184,14 +193,16 @@ export default function LandingPage() {
                 renders at the image's native aspect ratio with no cropping
                 and no clip-path/mask CSS — cropping via a viewport-relative
                 height would misalign the pre-baked curve against the page
-                background. */}
-            <RevealBlock className="md:col-span-7">
+                background. No padding/margin on this half at all — it fills
+                its container (100% width on mobile, 50% of the viewport on
+                desktop) edge to edge. */}
+            <RevealBlock className="w-full md:w-1/2">
               <div className="relative aspect-[1920/1616] w-full overflow-hidden">
                 <Image
                   src="/images/landing/landing2.jpg"
                   alt=""
                   fill
-                  sizes="(min-width: 768px) 58vw, 100vw"
+                  sizes="(min-width: 768px) 50vw, 100vw"
                   className="object-cover"
                 />
               </div>
