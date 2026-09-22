@@ -4,8 +4,9 @@
 # data. Idempotent and restart-safe: it must tolerate an already-running daemon
 # or stack, reach a clear ready state, and then return (no foreground servers).
 #
-# The Next.js dev server is intentionally NOT started here; it runs as a
-# long-lived tmux terminal (see .cursor/environment.json `terminals`).
+# After setup, this script stays attached running the Next.js dev server (the
+# environment `start` process). Set CLOUD_START_SKIP_DEV=1 to run setup only
+# (used when re-running setup by hand while a dev server is already up).
 
 set -euo pipefail
 
@@ -60,4 +61,13 @@ done
 echo "[start] Seeding demo data..."
 ALLOW_SEED=1 node scripts/seed-demo.mjs || echo "[start] WARN: demo seed reported an issue (continuing)."
 
-echo "[start] Environment ready. Dev server runs in the 'dev' terminal (http://localhost:3000)."
+echo "[start] Environment ready."
+
+# --- 4. Next.js dev server (stays attached) -------------------------------
+if [ "${CLOUD_START_SKIP_DEV:-0}" = "1" ]; then
+  echo "[start] CLOUD_START_SKIP_DEV=1 set; skipping dev server launch."
+  exit 0
+fi
+
+echo "[start] Launching Next.js dev server on http://localhost:3000 ..."
+exec npm run dev
