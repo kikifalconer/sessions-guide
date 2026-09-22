@@ -40,13 +40,11 @@ echo "[start] Docker is ready."
 
 # --- 2. Supabase local stack ----------------------------------------------
 # `supabase start` is idempotent: it reuses existing volumes (so applied
-# migrations and seeded rows persist) and simply (re)starts containers.
-if supabase status >/dev/null 2>&1; then
-  echo "[start] Supabase already running."
-else
-  echo "[start] Starting Supabase local stack..."
-  supabase start
-fi
+# migrations and seeded rows persist) and (re)starts any stopped containers.
+# Always call it: after a snapshot restore the containers exist but are stopped,
+# and `supabase status` can still report them, so we must not gate on status.
+echo "[start] Starting Supabase local stack..."
+supabase start
 
 # Wait for the REST gateway to answer before seeding.
 echo "[start] Waiting for Supabase API..."
