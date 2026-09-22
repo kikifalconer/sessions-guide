@@ -1,23 +1,70 @@
 #!/usr/bin/env bash
-# Cloud Agent environment: repository bootstrap (install phase).
-# Runs after the repo is checked out. Idempotent: safe to run repeatedly.
+# Cloud Agent environment: repository + system bootstrap (install phase).
+# Runs after the repo is checked out. Idempotent: safe to run repeatedly, and
+# self-contained so it works from the default base image (it does not rely on a
+# snapshot carrying system packages).
 #
-# Responsibilities (source-derived setup only; NO long-running processes here):
+# Responsibilities (durable, source-derived setup only; NO long-running
+# processes here — the Docker daemon and Supabase stack are started in
+# scripts/cloud/start.sh):
+#   - Install Docker + fuse-overlayfs so a local Supabase stack can run in the
+#     nested Cloud Agent VM.
+#   - Install a pinned Supabase CLI.
+#   - Configure Docker networking/storage for the nested VM.
 #   - Install Node dependencies from the lockfile.
-#   - Generate .env.local for local development if it is not already present.
-#     (.env.local is gitignored, so it never arrives via checkout.)
-#
-# Docker, the Supabase stack, and the dev server are runtime concerns handled by
-# scripts/cloud/start.sh (start phase) and the dev terminal.
+#   - Generate .env.local for local development (gitignored, so never checked out).
 
 set -euo pipefail
+
+# Pinned Supabase CLI version (validated for this environment).
+SUPABASE_CLI_VERSION="2.117.0"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
+# --- 1. Docker + fuse-overlayfs -------------------------------------------
+if ! command -v dockerd >/dev/null 2>&1; then
+  echo "[install] Installing Docker, iptables, and fuse-overlayfs..."
+  sudo apt-get update -y || true
+  # The fuse3/fuse-overlayfs post-install may fail to auto-start a service under
+  # policy-rc.d; that is harmless (dockerd is started in start.sh), so tolerate
+  # a non-zero apt exit and verify the binaries afterward.
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    docker.io fuse-overlayfs uidmap iptables || true
+  command -v dockerd >/dev/null 2>&1 || { echo "[install] ERROR: dockerd not installed"; exit 1; }
+  command -v fuse-overlayfs >/dev/null 2>&1 || { echo "[install] ERROR: fuse-overlayfs not installed"; exit 1; }
+else
+  echo "[install] Docker already installed."
+fi
+
+# --- 2. Supabase CLI (pinned) ---------------------------------------------
+if ! command -v supabase >/dev/null 2>&1; then
+  echo "[install] Installing Supabase CLI v${SUPABASE_CLI_VERSION}..."
+  curl -fsSL \
+    "https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/supabase_${SUPABASE_CLI_VERSION}_linux_amd64.deb" \
+    -o /tmp/supabase.deb
+  sudo dpkg -i /tmp/supabase.deb
+  rm -f /tmp/supabase.deb
+  command -v supabase >/dev/null 2>&1 || { echo "[install] ERROR: supabase CLI not installed"; exit 1; }
+else
+  echo "[install] Supabase CLI already installed ($(supabase --version 2>/dev/null | head -1))."
+fi
+
+# --- 3. Docker config for the nested VM -----------------------------------
+# Ubuntu defaults to the nftables firewall backend, which cannot program rules
+# in this nested kernel and breaks container-to-container networking. Force the
+# legacy iptables backend and the fuse-overlayfs storage driver (the VM root fs
+# is overlayfs, so overlay2 is unavailable).
+sudo update-alternatives --set iptables /usr/sbin/iptables-legacy >/dev/null 2>&1 || true
+sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy >/dev/null 2>&1 || true
+sudo mkdir -p /etc/docker
+echo '{"storage-driver":"fuse-overlayfs","firewall-backend":"iptables"}' | sudo tee /etc/docker/daemon.json >/dev/null
+
+# --- 4. Node dependencies -------------------------------------------------
 echo "[install] Installing Node dependencies (npm ci)..."
 npm ci
 
+# --- 5. Local dev environment file ----------------------------------------
 if [ ! -f .env.local ]; then
   echo "[install] Writing .env.local for local Supabase development..."
   cat > .env.local <<'ENV'
