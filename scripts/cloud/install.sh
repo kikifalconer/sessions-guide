@@ -26,10 +26,17 @@ cd "$REPO_ROOT"
 if ! command -v dockerd >/dev/null 2>&1; then
   echo "[install] Installing Docker, iptables, and fuse-overlayfs..."
   sudo apt-get update -y || true
-  # The fuse3/fuse-overlayfs post-install may fail to auto-start a service under
-  # policy-rc.d; that is harmless (dockerd is started in start.sh), so tolerate
-  # a non-zero apt exit and verify the binaries afterward.
+  # Non-interactive install notes:
+  #   - DEBIAN_FRONTEND=noninteractive alone does NOT suppress dpkg conffile
+  #     prompts (e.g. /etc/fuse.conf already exists on some base images), which
+  #     would hang the build; force-confold/force-confdef keeps the existing
+  #     file and never prompts.
+  #   - The fuse3/fuse-overlayfs post-install may fail to auto-start a service
+  #     under policy-rc.d; that is harmless (dockerd is started in start.sh), so
+  #     tolerate a non-zero apt exit and verify the binaries afterward.
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    -o Dpkg::Options::=--force-confold \
+    -o Dpkg::Options::=--force-confdef \
     docker.io fuse-overlayfs uidmap iptables || true
   command -v dockerd >/dev/null 2>&1 || { echo "[install] ERROR: dockerd not installed"; exit 1; }
   command -v fuse-overlayfs >/dev/null 2>&1 || { echo "[install] ERROR: fuse-overlayfs not installed"; exit 1; }
