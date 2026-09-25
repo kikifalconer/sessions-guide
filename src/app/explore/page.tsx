@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
-import SiteHeader from '@/components/site-header'
 import { categoryPath } from '@/lib/routes'
 import { buildMetadata } from '@/lib/metadata'
+import AppOrPublicShell from '@/components/dashboard/AppOrPublicShell'
 
 export const metadata = buildMetadata({
   concept: 'browse sessions',
@@ -22,8 +22,8 @@ export default async function ExplorePage() {
     .order('sort_order')
 
   return (
+    <AppOrPublicShell>
     <main className="min-h-screen bg-bg">
-      <SiteHeader />
 
       <div className="mx-auto w-full max-w-[1200px] px-6 py-16">
         <h1 className="mb-2">Find a practitioner who actually gets it.</h1>
@@ -52,5 +52,6 @@ export default async function ExplorePage() {
         </p>
       </div>
     </main>
+    </AppOrPublicShell>
   )
 }

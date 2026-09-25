@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import SiteHeader from '@/components/site-header'
+import AppOrPublicShell from '@/components/dashboard/AppOrPublicShell'
 import ProfileHero from './ProfileHero'
 import InfoStrip, { type ProfileLink } from './InfoStrip'
 import AboutSection from './AboutSection'
@@ -255,6 +256,7 @@ export default async function PractitionerProfilePage({
   })
 
   return (
+    <AppOrPublicShell signedOutHeader={<SiteHeader centerLabel={profile.full_name} />}>
     <main className="min-h-screen bg-bg">
      {profile.is_published && !isFixture(slug) && <JsonLd data={practitionerSeo} />}
       {!profile.is_published && isOwner && (
@@ -264,8 +266,6 @@ export default async function PractitionerProfilePage({
           </p>
         </div>
       )}
-
-      <SiteHeader centerLabel={profile.full_name} />
 
       <ProfileHero
         name={profile.full_name}
@@ -297,5 +297,6 @@ export default async function PractitionerProfilePage({
         disclaimer={hasPsychedelicFacilitation ? PSYCHEDELIC_DISCLAIMER : null}
       />
     </main>
+    </AppOrPublicShell>
   )
 }

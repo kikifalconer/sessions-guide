@@ -22,14 +22,14 @@ function PromptCard({ prompt }: { prompt: ReviewPromptView }) {
 
   if (done) {
     return (
-      <div className="border border-border bg-surface px-4 py-3">
+      <div className="bg-light px-4 py-3">
         <p>Your review of {prompt.practitionerName} is posted. Thank you.</p>
       </div>
     )
   }
 
   return (
-    <div className="border border-border bg-surface">
+    <div className="bg-light">
       <div className="flex items-baseline justify-between gap-4 px-4 py-3">
         <span className="min-w-0">
           <span className="label block text-dark">{prompt.sessionName.toUpperCase()}</span>
@@ -47,7 +47,7 @@ function PromptCard({ prompt }: { prompt: ReviewPromptView }) {
 
       {open && (
         <form
-          className="flex flex-col gap-5 border-t border-border px-4 py-4"
+          className="flex flex-col gap-5 px-4 py-4"
           onSubmit={(e) => {
             e.preventDefault()
             setError(null)
@@ -100,7 +100,7 @@ function PromptCard({ prompt }: { prompt: ReviewPromptView }) {
               onChange={(e) => setBody(e.target.value)}
               rows={4}
               maxLength={2000}
-              className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
+              className="w-full bg-light px-4 py-3 font-body font-light text-dark outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive"
             />
           </div>
 
@@ -154,7 +154,7 @@ export default function SeekerReviews({
           <h5 className="mb-4 text-dark">YOUR REVIEWS</h5>
           <div className="flex flex-col gap-3">
             {reviews.map((r) => (
-              <div key={r.id} className="border border-border bg-surface px-4 py-3">
+              <div key={r.id} className="bg-light px-4 py-3">
                 <div className="flex items-baseline justify-between gap-4">
                   <span className="min-w-0">
                     <span className="text-olive">

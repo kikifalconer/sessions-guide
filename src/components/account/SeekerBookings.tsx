@@ -36,7 +36,7 @@ function CancelPanel({ booking }: { booking: SeekerBookingView }) {
 
   if (outcome) {
     return (
-      <div className="mt-4 border border-border bg-surface px-4 py-3">
+      <div className="mt-4 bg-light px-4 py-3">
         <p className="mb-1">Your session is cancelled.</p>
         {outcome.paymentStatus === 'refunded' && outcome.refundAmount > 0 && (
           <p>
@@ -67,7 +67,7 @@ function CancelPanel({ booking }: { booking: SeekerBookingView }) {
   }
 
   return (
-    <div className="mt-4 border border-border bg-surface px-4 py-3">
+    <div className="mt-4 bg-light px-4 py-3">
       <p className="mb-2">This will cancel your session.</p>
       <p className="caption mb-4 text-dark opacity-70">{booking.cancellationPolicyCopy}</p>
       {error && <p className="caption mb-3 text-olive">{error}</p>}
@@ -107,7 +107,7 @@ function BookingCard({ booking }: { booking: SeekerBookingView }) {
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="border border-border bg-surface">
+    <div className="bg-light">
       <button
         type="button"
         className="flex w-full items-baseline justify-between gap-4 px-4 py-3 text-left"
@@ -120,11 +120,14 @@ function BookingCard({ booking }: { booking: SeekerBookingView }) {
             {whenLocal(booking.startUtc)} with {booking.practitionerName}
           </span>
         </span>
-        <span className="caption shrink-0 text-olive">{STATUS_LABEL[booking.status]}</span>
+        <span className="caption shrink-0 text-right text-olive">
+          <span className="block">{STATUS_LABEL[booking.status]}</span>
+          <span className="mt-1 block">Manage booking</span>
+        </span>
       </button>
 
       {open && (
-        <div className="border-t border-border px-4 py-4">
+        <div className="px-4 py-4">
           <p className="mb-1">
             {booking.bookedFormat === 'virtual' ? 'Virtual' : 'In person'}
             {booking.locationDisplay ? `. ${booking.locationDisplay}` : ''}

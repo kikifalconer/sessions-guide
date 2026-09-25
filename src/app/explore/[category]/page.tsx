@@ -3,9 +3,9 @@ import Image from 'next/image'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { discoverPractitioners } from '@/lib/discovery'
 import PractitionerCard from '@/components/PractitionerCard'
-import SiteHeader from '@/components/site-header'
 import { getSiteUrl } from '@/lib/siteUrl'
 import { JsonLd, categoryPageJsonLd, breadcrumbJsonLd } from '@/lib/seo/structuredData'
+import AppOrPublicShell from '@/components/dashboard/AppOrPublicShell'
 
 // `wordmark` is the cream lettering rendered over the hero photograph in place
 // of a visible H1 (the H1 survives as sr-only text). Files live in
@@ -193,9 +193,9 @@ export default async function CategoryPage({
   ])
 
   return (
+    <AppOrPublicShell>
     <main className="min-h-screen bg-bg">
       <JsonLd data={[categorySeo, breadcrumbSeo]} />
-      <SiteHeader />
 
       {/* Full-width hero */}
       <div className="relative left-1/2 right-1/2 -mx-[50vw] h-[360px] w-screen overflow-hidden">
@@ -256,5 +256,6 @@ export default async function CategoryPage({
         )}
       </div>
     </main>
+    </AppOrPublicShell>
   )
 }

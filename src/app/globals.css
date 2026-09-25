@@ -1,15 +1,5 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: "SessionsGuide";
-  src:
-    url("/fonts/SessionsGuide.woff2") format("woff2"),
-    url("/fonts/SessionsGuide.woff") format("woff"),
-    url("/fonts/SessionsGuide.otf") format("opentype");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
 
 :root {
   --color-bg:      #eae5df;
@@ -24,10 +14,11 @@
   --color-hero-overlay: rgba(30, 18, 1, 0.10); /* 10% black wash over hero banners */
   --color-hero-scrim: rgba(17, 17, 17, 0.55);  /* bottom gradient so hero title stays legible over any image */
 
-  --font-display:  "SessionsGuide", Arial, sans-serif;
+  --font-display:  "minerva-modern", Arial, sans-serif;
   --font-heading:  "minerva-modern", sans-serif;
   --font-body:     "ibm-plex-mono", sans-serif;
   --font-ui:       "ibm-plex-mono", sans-serif;
+
 
   /* hairline rule — Page 3 cancellations table */
   --rule-hairline: 1px solid var(--color-border);
@@ -417,9 +408,9 @@ h3 {
 }
 
 h4 {
-  font-family: var(--font-body);
+  font-family: var(--font-heading);
   font-weight: 300;
-  font-size: 1rem;
+  font-size:  clamp(0.7rem, 1.75vw, 1.3rem);
   line-height: 1.2;
 }
 

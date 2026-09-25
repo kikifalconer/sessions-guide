@@ -1,8 +1,10 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { BRAND_NAME } from '@/lib/brand'
 import { requirePractitioner } from '../../requirePractitioner'
 import NotesEditor from '../NotesEditor'
+import CommunityNav from '../CommunityNav'
 
 export const metadata = { title: `client | ${BRAND_NAME}` }
 
@@ -39,7 +41,13 @@ export default async function DashboardCommunityClientPage({
   return (
     <main className="px-8 py-12">
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-10">
+        <CommunityNav current="clients" />
         <div>
+          <p className="caption mb-4">
+            <Link href="/dashboard/community" className="text-olive outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive">
+              Back to clients
+            </Link>
+          </p>
           <h1>{name}</h1>
           <p className="mt-4 text-dark">{email ?? 'No contact email on file.'}</p>
           <p className="caption mt-2 text-dark opacity-70">

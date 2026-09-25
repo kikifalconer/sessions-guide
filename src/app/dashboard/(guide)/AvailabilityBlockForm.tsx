@@ -27,7 +27,7 @@ export type AvailabilityBlockRow = {
 }
 
 const FIELD =
-  'w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive'
+  'w-full bg-light px-4 py-3 font-body font-light text-dark outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive'
 
 const FORMAT_LABEL: Record<string, string> = {
   virtual: 'Virtual',
@@ -213,9 +213,9 @@ export default function AvailabilityBlockForm({
 
   return (
     <div className="mx-auto mt-10 w-full max-w-[640px]">
-      <p className="label mb-8 text-dark">
+      <h3 className="mb-8">
         {isEdit ? 'EDIT AVAILABILITY BLOCK' : 'NEW AVAILABILITY BLOCK'}
-      </p>
+      </h3>
 
       <div className="flex flex-col gap-6">
         {/* 1. Format — drives whether location appears. */}
@@ -245,7 +245,7 @@ export default function AvailabilityBlockForm({
           <div>
             <p className="label mb-2 text-dark">LOCATION</p>
             {placeId && display ? (
-              <div className="flex items-center justify-between border border-olive bg-surface px-4 py-3">
+              <div className="flex items-center justify-between bg-light px-4 py-3">
                 <span className="font-body font-light text-dark">{display}</span>
                 <button type="button" onClick={clearLocation} className="caption text-olive">
                   CHANGE
@@ -262,7 +262,7 @@ export default function AvailabilityBlockForm({
                   className={FIELD}
                 />
                 {predictions.length > 0 && (
-                  <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto border border-border bg-light">
+                  <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto bg-light">
                     {predictions.map((p) => (
                       <li key={p.placeId}>
                         <button
@@ -346,10 +346,10 @@ export default function AvailabilityBlockForm({
                 key={d}
                 type="button"
                 onClick={() => toggleDay(d)}
-                className={`caption border px-3 py-2 ${
+                className={`caption min-h-[44px] px-3 py-2 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive ${
                   days.has(d)
-                    ? 'border-olive bg-olive text-light'
-                    : 'border-border bg-surface text-dark'
+                    ? 'bg-olive text-light'
+                    : 'bg-light text-dark'
                 }`}
               >
                 {d}

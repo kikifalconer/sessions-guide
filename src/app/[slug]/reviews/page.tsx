@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { DateTime } from 'luxon'
 import { reviewsForPractitioner } from '@/lib/reviews'
-import SiteHeader from '@/components/site-header'
+import AppOrPublicShell from '@/components/dashboard/AppOrPublicShell'
 import ReportReview from './ReportReview'
 
 export async function generateMetadata({
@@ -28,8 +28,8 @@ export default async function ReviewsPage({
   const filled = avgRating !== null ? Math.round(avgRating) : 0
 
   return (
+    <AppOrPublicShell>
     <main className="min-h-screen bg-bg">
-      <SiteHeader />
 
       <div className="mx-auto w-full max-w-3xl px-6 py-12">
         <nav className="caption mb-6 text-dark" aria-label="Breadcrumb">
@@ -80,5 +80,6 @@ export default async function ReviewsPage({
         )}
       </div>
     </main>
+    </AppOrPublicShell>
   )
 }

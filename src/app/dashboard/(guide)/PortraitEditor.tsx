@@ -37,13 +37,13 @@ export default function PortraitEditor({ initialPhotoUrl }: { initialPhotoUrl: s
   return (
     <div>
       <p className="label mb-2 text-dark">PORTRAIT</p>
-      <div className="relative aspect-square w-full max-w-[180px] overflow-hidden border border-border bg-surface">
+      <div className="relative h-32 w-32 overflow-hidden bg-light">
         {url && (
           <Image
             src={faceCrop(url, 360)}
             alt="Profile portrait"
             fill
-            sizes="180px"
+            sizes="128px"
             className="object-cover"
           />
         )}

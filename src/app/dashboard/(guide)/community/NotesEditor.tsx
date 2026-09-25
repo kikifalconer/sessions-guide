@@ -42,7 +42,7 @@ export default function NotesEditor({
         }}
         rows={6}
         placeholder="Private notes about this client. Only you can see this."
-        className="w-full max-w-[560px] border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
+        className="w-full max-w-[560px] bg-light px-4 py-3 font-body font-light text-dark outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive"
       />
       <div className="mt-3 flex items-center gap-3">
         <button type="button" className="btn-secondary" disabled={pending || saved} onClick={save}>

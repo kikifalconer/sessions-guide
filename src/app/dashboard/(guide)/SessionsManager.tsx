@@ -100,12 +100,12 @@ export default function SessionsManager({
   const row = (s: SessionTypeRow) => (
     <article
       key={s.id}
-      className={`flex flex-col gap-3 border border-border bg-surface px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${
+      className={`flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between ${
         s.isActive ? '' : 'opacity-60'
       }`}
     >
       <div className="min-w-0">
-        <p className="caption text-dark">{s.name}</p>
+        <p className="font-display text-dark">{s.name}</p>
         <p className="caption mt-1 text-dark opacity-70">
           {[
             `${s.durationMinutes} MIN`,
@@ -176,23 +176,23 @@ export default function SessionsManager({
   )
 
   return (
-    <div className="mx-auto mt-10 w-full max-w-[760px]">
+    <div className="w-full">
       <div className="flex items-center justify-between">
-        <p className="label text-dark">YOUR SESSION TYPES</p>
+        <h3 className="font-display font-normal normal-case tracking-normal">Your offerings</h3>
         <button
           type="button"
           className="btn-primary"
           onClick={() => setView({ kind: 'create' })}
         >
-          ADD SESSION TYPE
+          Add offering
         </button>
       </div>
 
       {error && <p className="caption mt-4 text-olive">{error}</p>}
 
       {sessionTypes.length === 0 ? (
-        <p className="mt-12 text-center text-dark">
-          No session types yet. Add your first to start building your catalog.
+        <p className="mt-12 text-dark">
+          No offerings yet. Add your first to start building your catalog.
         </p>
       ) : (
         <div className="mt-8 flex flex-col gap-4">

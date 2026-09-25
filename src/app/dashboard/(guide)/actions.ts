@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { cancelBooking } from '@/lib/cancellation'
 
 export type ActionResult = { ok: boolean; error?: string }
 
@@ -56,5 +57,37 @@ export async function publishProfile(): Promise<ActionResult> {
 
   revalidatePath('/dashboard')
   revalidatePath(`/${row.slug}`)
+  return { ok: true }
+}
+
+export async function cancelGuideBooking(bookingId: string): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated' }
+
+  const { data: practitioner } = await supabase
+    .from('practitioners')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!practitioner) return { ok: false, error: 'No practitioner profile' }
+
+  const admin = createAdminClient()
+  const { data: booking } = await admin
+    .from('bookings')
+    .select('id, practitioner_id')
+    .eq('id', bookingId)
+    .maybeSingle()
+
+  if (!booking || booking.practitioner_id !== practitioner.id) {
+    return { ok: false, error: 'This booking could not be found.' }
+  }
+
+  const result = await cancelBooking({ bookingId, cancelledBy: 'practitioner' })
+  if (!result.ok) return { ok: false, error: result.error }
+
+  revalidatePath('/dashboard/bookings')
+  revalidatePath(`/dashboard/bookings/${bookingId}`)
   return { ok: true }
 }

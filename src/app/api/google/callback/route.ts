@@ -13,12 +13,12 @@ export const runtime = 'nodejs'
 
 const STATE_COOKIE = 'g_cal_oauth_nonce'
 
-// D28 / GAP-4: the calendar panel now lives on /dashboard/profile (folded
+// D28 / GAP-4: the calendar panel now lives on /dashboard/availability (folded
 // in from the retired SETTINGS tab), so that's the default landing spot —
 // previously this always redirected to bare /dashboard, which landed on
 // whatever tab the client-side shell defaulted to (PROFILE), not
 // necessarily where the connect flow started.
-function dashboard(path = '/dashboard/profile', query = ''): URL {
+function dashboard(path = '/dashboard/availability', query = ''): URL {
   return new URL(`${path}${query}`, process.env.NEXT_PUBLIC_SITE_URL)
 }
 
@@ -37,12 +37,12 @@ export async function GET(req: NextRequest) {
 
   // User declined consent, or Google returned an error.
   if (error || !code || !state) {
-    return redirectClearingNonce(dashboard('/dashboard/profile', '?calendar=error'))
+    return redirectClearingNonce(dashboard('/dashboard/availability', '?calendar=error'))
   }
 
   const parsed = verifyState(state)
   if (!parsed) {
-    return redirectClearingNonce(dashboard('/dashboard/profile', '?calendar=error'))
+    return redirectClearingNonce(dashboard('/dashboard/availability', '?calendar=error'))
   }
 
   // Session binding: the logged-in user MUST be the practitioner named in the
@@ -53,20 +53,20 @@ export async function GET(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user || user.id !== parsed.pid) {
-    return redirectClearingNonce(dashboard('/dashboard/profile', '?calendar=error'))
+    return redirectClearingNonce(dashboard('/dashboard/availability', '?calendar=error'))
   }
 
   // Single-use nonce: must match the cookie set at connect time.
   const cookieNonce = req.cookies.get(STATE_COOKIE)?.value
   if (!cookieNonce || cookieNonce !== parsed.nonce) {
-    return redirectClearingNonce(dashboard('/dashboard/profile', '?calendar=error'))
+    return redirectClearingNonce(dashboard('/dashboard/availability', '?calendar=error'))
   }
 
   const practitionerId = parsed.pid
 
   const tokens = await exchangeCode(code)
   if (!tokens) {
-    return redirectClearingNonce(dashboard('/dashboard/profile', '?calendar=error'))
+    return redirectClearingNonce(dashboard('/dashboard/availability', '?calendar=error'))
   }
 
   const admin = createAdminClient()
@@ -87,8 +87,8 @@ export async function GET(req: NextRequest) {
     { onConflict: 'practitioner_id' }
   )
   if (upsertError) {
-    return redirectClearingNonce(dashboard('/dashboard/profile', '?calendar=error'))
+    return redirectClearingNonce(dashboard('/dashboard/availability', '?calendar=error'))
   }
 
-  return redirectClearingNonce(dashboard('/dashboard/profile', '?calendar=connected'))
+  return redirectClearingNonce(dashboard('/dashboard/availability', '?calendar=connected'))
 }

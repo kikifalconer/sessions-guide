@@ -6,7 +6,7 @@ import { BRAND_NAME } from '@/lib/brand'
 // Olive field, a wordmark column plus two citron-headed link columns, and a
 // full-width bottom bar.
 
-const HEADER = 'font-ui text-[0.72rem] uppercase tracking-[0.08em] text-citron'
+const HEADER = 'font-display text-[0.72rem] font-medium text-citron'
 const LINK =
   'font-ui text-[0.72rem] uppercase tracking-[0.08em] text-cream transition-opacity hover:opacity-80'
 // Held-out items with no live route (or explicitly withheld — THE SAGES
@@ -49,12 +49,12 @@ export default function SiteFooter() {
         {/* Column two — for guides */}
         <div className="flex flex-col gap-5 sm:pt-2">
           <p className={HEADER}>For Guides</p>
-          <p className={LINK}>
-            <Link href="/join-guidesspace" className="hover:opacity-80">
+          <p className="font-ui text-[0.72rem] uppercase tracking-[0.08em] text-cream">
+            <Link href="/join-guidesspace" className={LINK}>
               Join
             </Link>
             {' / '}
-            <Link href="/login" className="hover:opacity-80">
+            <Link href="/login" className={LINK}>
               Log In
             </Link>
           </p>

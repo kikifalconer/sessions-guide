@@ -138,16 +138,13 @@ export default function BillingClient({
   const trialLabel = formatDate(subscription?.trialEnd ?? null)
 
   return (
-    <div className="min-h-screen bg-bg">
-      <div className="mx-auto w-full max-w-3xl px-6 py-16">
-        {/* PLACEHOLDER COPY — Kiki rework */}
-        <p className="label mb-2 text-olive">Billing</p>
-        <h2 className="mb-8">Your plan</h2>
+    <div>
+        <h2>Membership</h2>
 
-        {error && <p className="caption mb-6 text-olive">{error}</p>}
+        {error && <p className="caption mt-6 text-olive">{error}</p>}
 
         {/* Current-plan summary */}
-        <section className="mb-10 border border-border bg-surface p-6">
+        <section className="mt-8 mb-10">
           {/* PLACEHOLDER COPY — Kiki rework */}
           <p className="label mb-2 text-dark">Current tier</p>
           <p className="font-ui text-olive" style={{ letterSpacing: '0.06em' }}>
@@ -178,15 +175,25 @@ export default function BillingClient({
             </p>
           )}
 
-          {(isSubscriber || hasCustomer) && (
-            <button
-              type="button"
-              className="btn-secondary mt-6"
-              onClick={manageBilling}
-              disabled={busy !== null}
-            >
-              {busy === 'portal' ? 'Opening' : 'Manage billing'}
-            </button>
+          {hasCustomer && (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={manageBilling}
+                disabled={busy !== null}
+              >
+                {busy === 'portal' ? 'Opening' : 'Manage membership'}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={manageBilling}
+                disabled={busy !== null}
+              >
+                {busy === 'portal' ? 'Opening' : 'Cancel membership'}
+              </button>
+            </div>
           )}
         </section>
 
@@ -225,7 +232,7 @@ export default function BillingClient({
               {(['elevated', 'alchemist'] as PaidTier[]).map((paidTier) => {
                 const info = TIER_INFO[paidTier]
                 return (
-                  <section key={paidTier} className="border border-border bg-surface p-6">
+                  <section key={paidTier}>
                     {/* PLACEHOLDER COPY — Kiki rework */}
                     <p className="label mb-2 text-olive">{info.name}</p>
                     <p className="font-ui mb-4 text-dark" style={{ letterSpacing: '0.04em' }}>
@@ -252,7 +259,7 @@ export default function BillingClient({
             </div>
 
             {/* Sage code redemption (D25) — wired to /api/sage-codes/redeem */}
-            <section className="mt-12 border border-border bg-surface p-6">
+            <section className="mt-12">
               {/* PLACEHOLDER COPY — Kiki rework */}
               <p className="label mb-2 text-olive">Sage code</p>
               <p className="caption mb-4 text-dark">
@@ -264,7 +271,7 @@ export default function BillingClient({
                   value={sageCode}
                   onChange={(e) => setSageCode(e.target.value)}
                   placeholder="SAGE-XXXX-XXXX"
-                  className="font-ui flex-1 border border-border bg-light px-4 py-3 text-dark"
+                  className="font-ui flex-1 bg-light px-4 py-3 text-dark outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive"
                   style={{ letterSpacing: '0.06em' }}
                   disabled={busy === 'sage' || sageOk}
                 />
@@ -282,7 +289,6 @@ export default function BillingClient({
             </section>
           </>
         )}
-      </div>
     </div>
   )
 }

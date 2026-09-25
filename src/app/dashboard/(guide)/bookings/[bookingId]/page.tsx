@@ -3,6 +3,8 @@ import { DateTime } from 'luxon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { BRAND_NAME } from '@/lib/brand'
 import { requirePractitioner } from '../../requirePractitioner'
+import { GuideCancelButton } from '../GuideCancelButton'
+import BookingsNav from '@/components/dashboard/BookingsNav'
 
 export const metadata = { title: `booking | ${BRAND_NAME}` }
 
@@ -47,7 +49,8 @@ export default async function DashboardBookingDetailPage({
   return (
     <main className="px-8 py-12">
       <div className="mx-auto w-full max-w-[1200px]">
-        <h1>{st?.name ?? 'Session'}</h1>
+        <BookingsNav current="guide" />
+        <h1 className="mt-10">{st?.name ?? 'Session'}</h1>
         <dl className="mt-8 flex max-w-[480px] flex-col gap-4">
           <div>
             <dt className="label text-dark opacity-70">CLIENT</dt>
@@ -71,6 +74,12 @@ export default async function DashboardBookingDetailPage({
             <dd className="mt-1 text-dark">{STATUS_LABEL[booking.status as string] ?? booking.status}</dd>
           </div>
         </dl>
+        {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+          <div className="mt-8">
+            <p className="label mb-3 text-dark">Manage booking</p>
+            <GuideCancelButton bookingId={booking.id as string} />
+          </div>
+        )}
       </div>
     </main>
   )

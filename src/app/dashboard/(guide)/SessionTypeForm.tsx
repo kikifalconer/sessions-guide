@@ -42,7 +42,7 @@ export type PractitionerDefaults = {
 }
 
 const FIELD =
-  'w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive'
+  'w-full bg-light px-4 py-3 font-body font-light text-dark outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive'
 
 const FORMAT_LABEL: Record<string, string> = {
   virtual: 'Virtual',
@@ -308,7 +308,7 @@ export default function SessionTypeForm({
         <div>
           <p className="label mb-2 text-dark">MODALITY</p>
           {selectedModality && !picking ? (
-            <div className="flex items-center justify-between border border-olive bg-surface px-4 py-3">
+            <div className="flex items-center justify-between bg-light px-4 py-3">
               <span className="font-body font-light text-dark">
                 {selectedModality.name}
               </span>
@@ -329,7 +329,7 @@ export default function SessionTypeForm({
                 placeholder="Search modalities"
                 className={FIELD}
               />
-              <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto border border-border bg-light">
+              <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto bg-light">
                 {filteredModalities.length === 0 && (
                   <li className="px-4 py-3">
                     <p>No matches. Try a different search.</p>
@@ -354,7 +354,7 @@ export default function SessionTypeForm({
           )}
 
           {untaggedSelected && (
-            <div className="mt-3 border border-border bg-surface px-4 py-3">
+            <div className="mt-3 bg-light px-4 py-3">
               <p className="caption text-dark">
                 This modality is not on your profile yet.
               </p>
@@ -513,7 +513,7 @@ export default function SessionTypeForm({
         {/* Photo — optional, reuses the Cloudinary unsigned-upload helper. */}
         <div>
           <p className="label mb-2 text-dark">PHOTO</p>
-          <div className="relative aspect-video w-full overflow-hidden border border-border bg-surface">
+          <div className="relative aspect-video w-full overflow-hidden bg-light">
             {photoUrl && (
               <Image
                 src={cardCrop(photoUrl, 800, 450)}

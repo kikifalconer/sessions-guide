@@ -3,17 +3,17 @@
 import { useState, useTransition } from 'react'
 import { saveNameTagline } from '@/app/join/actions'
 
-// Display Name field for the dashboard's YOUR PROFILE card, reusing
-// onboarding's saveNameTagline() action. Tagline isn't a mockup field here,
-// so it's carried through unchanged rather than exposed as a second input.
 export default function DisplayNameEditor({
   initialFullName,
   initialTagline,
+  fields = 'both',
 }: {
   initialFullName: string
   initialTagline: string | null
+  fields?: 'name' | 'tagline' | 'both'
 }) {
   const [name, setName] = useState(initialFullName)
+  const [tagline, setTagline] = useState(initialTagline ?? '')
   const [saved, setSaved] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -21,7 +21,7 @@ export default function DisplayNameEditor({
   const save = () => {
     setError(null)
     startTransition(async () => {
-      const result = await saveNameTagline(name, initialTagline ?? '')
+      const result = await saveNameTagline(name, tagline)
       if (!result.ok) {
         setError(result.error ?? 'Something went wrong. Try again or contact support.')
         return
@@ -30,32 +30,59 @@ export default function DisplayNameEditor({
     })
   }
 
+  const fieldClass =
+    'w-full max-w-[360px] bg-light px-4 py-3 font-body font-light text-dark outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive'
+
+  const showName = fields === 'name' || fields === 'both'
+  const showTagline = fields === 'tagline' || fields === 'both'
+
   return (
-    <div>
-      <label htmlFor="display_name" className="label mb-2 block text-dark">
-        DISPLAY NAME
-      </label>
-      <div className="flex items-center gap-3">
-        <input
-          id="display_name"
-          type="text"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value)
-            setSaved(false)
-          }}
-          className="w-full max-w-[360px] border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
-        />
+    <div className="flex flex-col gap-8">
+      {showName && (
+        <div>
+          <label htmlFor="display_name" className="label mb-2 block text-dark">
+            Display name
+          </label>
+          <input
+            id="display_name"
+            type="text"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setSaved(false)
+            }}
+            className={fieldClass}
+          />
+        </div>
+      )}
+      {showTagline && (
+        <div>
+          <label htmlFor="tagline" className="label mb-2 block text-dark">
+            Tagline
+          </label>
+          <input
+            id="tagline"
+            type="text"
+            value={tagline}
+            onChange={(e) => {
+              setTagline(e.target.value)
+              setSaved(false)
+            }}
+            className={fieldClass}
+          />
+        </div>
+      )}
+      <div>
         <button
           type="button"
-          className="btn-secondary shrink-0"
+          className="btn-secondary"
           disabled={pending || saved || !name.trim()}
           onClick={save}
         >
-          {pending ? 'SAVING' : 'SAVE'}
+          {pending ? 'Saving' : 'Save'}
         </button>
+        {error && <p className="caption mt-2 text-olive">{error}</p>}
       </div>
-      {error && <p className="caption mt-2 text-olive">{error}</p>}
     </div>
   )
 }

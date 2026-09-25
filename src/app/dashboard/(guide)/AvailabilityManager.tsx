@@ -87,7 +87,7 @@ export default function AvailabilityManager({
   const row = (b: AvailabilityBlockRow) => (
     <article
       key={b.id}
-      className={`flex flex-col gap-3 border border-border bg-surface px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${
+      className={`flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between ${
         b.isActive ? '' : 'opacity-60'
       }`}
     >
@@ -166,7 +166,7 @@ export default function AvailabilityManager({
   return (
     <div className="w-full">
       <div className="mx-auto mb-8 flex w-full max-w-[1100px] items-center justify-between">
-        <p className="label text-dark">YOUR AVAILABILITY</p>
+        <h3>YOUR AVAILABILITY</h3>
         <button type="button" className="btn-primary" onClick={() => setView({ kind: 'create' })}>
           ADD BLOCK
         </button>

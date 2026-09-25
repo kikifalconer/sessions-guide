@@ -2,9 +2,9 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { discoverInCity } from '@/lib/discovery'
 import PractitionerCard from '@/components/PractitionerCard'
-import SiteHeader from '@/components/site-header'
 import { DISCOVERY_HOME } from '@/lib/routes'
 import { JsonLd, cityPageJsonLd } from '@/lib/seo/structuredData'
+import AppOrPublicShell from '@/components/dashboard/AppOrPublicShell'
 
 const PSYCHEDELIC_DISCLAIMER =
   'Psychedelic journey facilitation may be subject to local laws and regulations. Practitioners and clients are solely responsible for ensuring compliance with the laws of their jurisdiction.'
@@ -48,9 +48,9 @@ export default async function CityPage({
   })
 
   return (
+    <AppOrPublicShell>
     <main className="min-h-screen bg-bg">
       <JsonLd data={citySeo} />
-      <SiteHeader />
 
       <div className="mx-auto w-full max-w-[1200px] px-6 py-12">
         <nav className="caption mb-6 text-dark" aria-label="Breadcrumb">
@@ -105,5 +105,6 @@ export default async function CityPage({
         )}
       </div>
     </main>
+    </AppOrPublicShell>
   )
 }

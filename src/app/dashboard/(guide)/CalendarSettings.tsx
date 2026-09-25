@@ -34,8 +34,7 @@ export default function CalendarSettings({
   }
 
   return (
-    <div className="mt-10 flex flex-col items-center gap-4">
-      <p className="label text-dark">GOOGLE CALENDAR</p>
+    <div className="mt-6 flex flex-col items-start gap-4">
 
       {connected ? (
         <>

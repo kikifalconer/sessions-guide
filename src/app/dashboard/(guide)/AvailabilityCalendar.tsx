@@ -141,7 +141,7 @@ export default function AvailabilityCalendar({
                       e.stopPropagation()
                       onSelectBlock(b.id)
                     }}
-                    className="block w-full border border-border bg-surface px-2 py-1 text-left transition-colors hover:border-olive"
+                    className="block w-full bg-light px-2 py-1 text-left outline-none hover:text-olive focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive"
                   >
                     <span className="caption block truncate text-dark">
                       {timeWindow(b)}

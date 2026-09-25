@@ -6,48 +6,87 @@ import { loadSeekerData } from '@/lib/seekerData'
 import { requirePractitioner } from '../requirePractitioner'
 import SeekerBookings from '@/components/account/SeekerBookings'
 import ReservationsCalendar, { type CalendarBookingMarker } from '../ReservationsCalendar'
+import PageHeader from '@/components/dashboard/PageHeader'
+import EmptyState from '@/components/dashboard/EmptyState'
+import BookingsNav from '@/components/dashboard/BookingsNav'
 
 export const metadata = { title: `my bookings | ${BRAND_NAME}` }
 
 const STATUS_LABEL: Record<string, string> = {
-  confirmed: 'CONFIRMED',
-  pending_payment: 'HELD',
-  pending_approval: 'HELD',
+  confirmed: 'Confirmed',
+  pending_payment: 'Held',
+  pending_approval: 'Held',
+  cancelled: 'Cancelled',
+  completed: 'Completed',
 }
 
-// D30 pass 1: consolidates three old routes into the target IA's single
-// MY BOOKINGS view (as guide and as client) -- reservations/page.tsx,
-// calendar/page.tsx, and this route's own previous seeker-only content, all
-// stacked on one page. Each section's query/JSX is carried over unchanged
-// from its source file; only the DETAILS links were repointed from
-// /dashboard/reservations/[id] to /dashboard/bookings/[id], since that
-// detail route moves in this same pass. No approve/decline anywhere here --
-// GAP-1: that transition does not exist in this codebase. Statuses shown are
-// exactly what's true today (CONFIRMED / HELD), nothing implies a guide can
-// act on a pending_approval row from this page.
-export default async function DashboardBookingsPage() {
+type BookingListRow = {
+  id: string
+  startUtc: string
+  bookedFormat: 'virtual' | 'in_person'
+  status: string
+  sessionName: string
+  clientName: string
+}
+
+export default async function DashboardBookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ role?: string; past?: string }>
+}) {
   const practitioner = await requirePractitioner()
   const admin = createAdminClient()
   const nowIso = DateTime.utc().toISO() as string
+  const params = await searchParams
+  const role = params.role === 'client' ? 'client' : 'guide'
+  const showAllPast = params.past === 'all'
 
-  const [{ data: reservationRows }, { data: calendarRows }, seekerData] = await Promise.all([
-    admin
-      .from('bookings')
-      .select('id, start_datetime, booked_format, status, seeker_id, guest_name, session_types ( name )')
-      .eq('practitioner_id', practitioner.id)
-      .in('status', ['confirmed', 'pending_payment', 'pending_approval'])
-      .gte('start_datetime', nowIso)
-      .order('start_datetime', { ascending: true }),
-    admin
-      .from('bookings')
-      .select('start_datetime, status')
-      .eq('practitioner_id', practitioner.id)
-      .in('status', ['confirmed', 'completed', 'pending_payment', 'pending_approval']),
-    loadSeekerData(practitioner.id),
-  ])
+  const [{ data: reservationRows }, { data: pastRows }, { data: calendarRows }, seekerData] =
+    await Promise.all([
+      admin
+        .from('bookings')
+        .select('id, start_datetime, booked_format, status, seeker_id, guest_name, session_types ( name )')
+        .eq('practitioner_id', practitioner.id)
+        .in('status', ['confirmed', 'pending_payment', 'pending_approval'])
+        .gte('start_datetime', nowIso)
+        .order('start_datetime', { ascending: true }),
+      admin
+        .from('bookings')
+        .select('id, start_datetime, booked_format, status, seeker_id, guest_name, session_types ( name )')
+        .eq('practitioner_id', practitioner.id)
+        .in('status', ['completed', 'cancelled'])
+        .order('start_datetime', { ascending: false }),
+      admin
+        .from('bookings')
+        .select('start_datetime, status')
+        .eq('practitioner_id', practitioner.id)
+        .in('status', ['confirmed', 'completed', 'pending_payment', 'pending_approval']),
+      loadSeekerData(practitioner.id),
+    ])
 
+  const mapRows = (
+    rows: typeof reservationRows,
+    names: Record<string, string>
+  ): BookingListRow[] =>
+    (rows ?? []).map((row) => {
+      const st = row.session_types as unknown as { name: string } | null
+      const seekerId = row.seeker_id as string | null
+      const clientName = seekerId
+        ? (names[seekerId] ?? 'A client')
+        : ((row.guest_name as string | null) ?? 'A client')
+      return {
+        id: row.id as string,
+        startUtc: row.start_datetime as string,
+        bookedFormat: row.booked_format as 'virtual' | 'in_person',
+        status: row.status as string,
+        sessionName: st?.name ?? 'Session',
+        clientName,
+      }
+    })
+
+  const allListRows = [...(reservationRows ?? []), ...(pastRows ?? [])]
   const seekerIds = Array.from(
-    new Set((reservationRows ?? []).map((r) => r.seeker_id as string | null).filter(Boolean))
+    new Set(allListRows.map((r) => r.seeker_id as string | null).filter(Boolean))
   ) as string[]
   const seekerNameById: Record<string, string> = {}
   if (seekerIds.length > 0) {
@@ -57,98 +96,93 @@ export default async function DashboardBookingsPage() {
     }
   }
 
-  const reservations = (reservationRows ?? []).map((row) => {
-    const st = row.session_types as unknown as { name: string } | null
-    const seekerId = row.seeker_id as string | null
-    const clientName = seekerId
-      ? (seekerNameById[seekerId] ?? 'A client')
-      : ((row.guest_name as string | null) ?? 'A client')
-    return {
-      id: row.id as string,
-      startUtc: row.start_datetime as string,
-      bookedFormat: row.booked_format as 'virtual' | 'in_person',
-      status: row.status as string,
-      sessionName: st?.name ?? 'Session',
-      clientName,
-    }
-  })
+  const reservations = mapRows(reservationRows, seekerNameById)
+  const pastAll = mapRows(pastRows, seekerNameById)
+  const pastVisible = showAllPast ? pastAll : pastAll.slice(0, 3)
+  const hasMorePast = !showAllPast && pastAll.length > 3
 
   const calendarMarkers: CalendarBookingMarker[] = (calendarRows ?? []).map((row) => ({
     isoDate: DateTime.fromISO(row.start_datetime as string).toISODate() as string,
     kind: row.status === 'confirmed' || row.status === 'completed' ? 'confirmed' : 'held',
   }))
 
+  function bookingRow(r: BookingListRow) {
+    return (
+      <li key={r.id} className="flex min-h-[44px] flex-wrap items-center justify-between gap-4 py-3">
+        <span className="min-w-0">
+          <span className="block text-dark">
+            {r.sessionName} · {r.clientName}
+          </span>
+          <span className="caption mt-1 block text-dark opacity-70">
+            {DateTime.fromISO(r.startUtc).toFormat('ccc, LLL d, h:mm a')} ·{' '}
+            {r.bookedFormat === 'virtual' ? 'Virtual' : 'In person'} ·{' '}
+            {STATUS_LABEL[r.status] ?? r.status}
+          </span>
+        </span>
+        <Link
+          href={`/dashboard/bookings/${r.id}`}
+          className="caption shrink-0 text-olive outline-none hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive"
+        >
+          Manage booking
+        </Link>
+      </li>
+    )
+  }
+
   return (
-    <main className="px-8 py-12">
+    <main className="px-6 py-12 sm:px-8">
       <div className="mx-auto w-full max-w-[1200px]">
-        <h1>My bookings</h1>
-        <p className="mt-4 max-w-[60ch] text-dark">
-          Sessions clients have booked with you, and sessions you have booked with other guides,
-          in one place.
-        </p>
+        <PageHeader title="Bookings" />
+        <BookingsNav current={role === 'client' ? 'client' : 'guide'} />
 
-        <div className="mt-12">
-          <h2>As a guide</h2>
-          <p className="mt-4 max-w-[60ch] text-dark">
-            Sessions clients have booked with you, upcoming first.
-          </p>
-          {reservations.length === 0 ? (
-            <p className="mt-6 max-w-[60ch] text-dark">
-              Nothing booked yet. Reservations will show here once someone books you.
-            </p>
-          ) : (
-            <ul className="mt-6 flex flex-col gap-3">
-              {reservations.map((r) => (
-                <li
-                  key={r.id}
-                  className="flex items-center justify-between border border-border bg-surface px-4 py-3"
-                >
-                  <span className="min-w-0">
-                    <span className="block text-dark">{r.sessionName} · {r.clientName}</span>
-                    <span className="caption mt-1 block text-dark opacity-70">
-                      {DateTime.fromISO(r.startUtc).toFormat('ccc, LLL d, h:mm a')} ·{' '}
-                      {r.bookedFormat === 'virtual' ? 'VIRTUAL' : 'IN PERSON'} · {STATUS_LABEL[r.status]}
-                    </span>
-                  </span>
-                  <Link href={`/dashboard/bookings/${r.id}`} className="caption shrink-0 text-olive">
-                    DETAILS
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {role === 'guide' && (
+          <>
+            <section className="mt-10">
+              <h2>Upcoming</h2>
+              {reservations.length === 0 ? (
+                <EmptyState>
+                  Nothing booked yet. Reservations will show here once someone books you.
+                </EmptyState>
+              ) : (
+                <ul className="mt-6 flex flex-col gap-3">{reservations.map(bookingRow)}</ul>
+              )}
+            </section>
 
-        <div className="mt-12">
-          <h2>Calendar</h2>
-          <p className="mt-4 max-w-[60ch] text-dark">
-            Confirmed and held reservations across the month.
-          </p>
-          <div className="mt-6">
-            <ReservationsCalendar markers={calendarMarkers} />
-          </div>
-        </div>
+            <section className="mt-12">
+              <h2>Past reservations</h2>
+              {pastAll.length === 0 ? (
+                <EmptyState>No past reservations yet.</EmptyState>
+              ) : (
+                <>
+                  <ul className="mt-6 flex flex-col gap-3">{pastVisible.map(bookingRow)}</ul>
+                  {hasMorePast && (
+                    <Link
+                      href="/dashboard/bookings?role=guide&past=all"
+                      className="caption mt-4 inline-block text-olive outline-none hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive"
+                    >
+                      See more
+                    </Link>
+                  )}
+                </>
+              )}
+            </section>
 
-        <div className="mt-12">
-          <h2>As a client</h2>
-          <p className="mt-4 max-w-[60ch] text-dark">
-            The sessions you have booked with other guides, as a client of your own practice.
-          </p>
-          <div className="mt-6">
-            <SeekerBookings upcoming={seekerData.upcoming} past={seekerData.past} />
-          </div>
-        </div>
+            <section className="mt-12">
+              <h2>Calendar</h2>
+              <div className="mt-6">
+                <ReservationsCalendar markers={calendarMarkers} />
+              </div>
+            </section>
+          </>
+        )}
 
-        {/* Reserved slot only -- no component, no query, no copy describing
-            what trade does or promising it's coming. Trade has no schema
-            (no trade_requests table, no practitioners.open_to_trade, no
-            bookings.trade_request_id) and nothing is built for it. */}
-        <div className="mt-12">
-          <h2>Trade requests</h2>
-          <div className="mt-6 border border-border bg-surface px-4 py-6">
-            <p className="caption text-dark opacity-70">Not available yet.</p>
-          </div>
-        </div>
+        {role === 'client' && (
+          <section className="mt-10">
+            <div className="mt-6">
+              <SeekerBookings upcoming={seekerData.upcoming} past={seekerData.past} />
+            </div>
+          </section>
+        )}
       </div>
     </main>
   )

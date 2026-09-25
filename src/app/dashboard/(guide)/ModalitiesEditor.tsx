@@ -104,10 +104,10 @@ export default function ModalitiesEditor({
           }}
           onFocus={() => setListOpen(true)}
           placeholder={atCapacity ? 'Three modalities selected' : 'Search modalities'}
-          className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive disabled:opacity-60"
+          className="w-full bg-light px-4 py-3 font-body font-light text-dark outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive disabled:opacity-60"
         />
         {listOpen && !atCapacity && (
-          <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto border border-border bg-light">
+          <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto bg-light">
             {filtered.length === 0 && (
               <li className="px-4 py-3">
                 <p>No matches. Try a different search.</p>
@@ -129,12 +129,17 @@ export default function ModalitiesEditor({
         )}
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap gap-x-4 gap-y-2">
         {primary && (
-          <span className="flex items-center gap-2 border border-olive bg-surface px-3 py-2">
+          <span className="flex items-center gap-2">
             <span className="caption text-dark">{primary.name}</span>
-            <button type="button" onClick={removePrimary} className="caption text-olive">
-              REMOVE
+            <button
+              type="button"
+              onClick={removePrimary}
+              aria-label={`Remove ${primary.name}`}
+              className="font-body text-lg font-bold leading-none text-olive outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive"
+            >
+              ×
             </button>
           </span>
         )}
@@ -142,10 +147,15 @@ export default function ModalitiesEditor({
           const m = byId.get(id)
           if (!m) return null
           return (
-            <span key={id} className="flex items-center gap-2 border border-border bg-surface px-3 py-2">
+            <span key={id} className="flex items-center gap-2">
               <span className="caption text-dark">{m.name}</span>
-              <button type="button" onClick={() => removeSecondary(id)} className="caption text-olive">
-                REMOVE
+              <button
+                type="button"
+                onClick={() => removeSecondary(id)}
+                aria-label={`Remove ${m.name}`}
+                className="font-body text-lg font-bold leading-none text-olive outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-olive"
+              >
+                ×
               </button>
             </span>
           )

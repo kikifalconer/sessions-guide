@@ -2,8 +2,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { BRAND_NAME } from '@/lib/brand'
 import { requirePractitioner } from '../requirePractitioner'
 import SessionsManager from '../SessionsManager'
+import PageHeader from '@/components/dashboard/PageHeader'
+import PracticeNav from '@/components/dashboard/PracticeNav'
 
-export const metadata = { title: `offerings | ${BRAND_NAME}` }
+export const metadata = { title: `practice | ${BRAND_NAME}` }
 
 // D30 pass 1: moved from sessions/page.tsx unchanged (IA consolidation --
 // SESSIONS becomes MY OFFERINGS). No internal /dashboard links in this file
@@ -74,13 +76,13 @@ export default async function DashboardOfferingsPage() {
   }
 
   return (
-    <main className="px-8 py-12">
+    <main className="px-6 py-12 sm:px-8">
       <div className="mx-auto w-full max-w-[1200px]">
-        <h1>Session types</h1>
-        <p className="mt-4 max-w-[60ch] text-dark">
-          These are the sessions seekers can book with you. Set the format, length, and price
-          for each one, and add as many as you offer.
-        </p>
+        <PageHeader
+          title="Practice"
+          description="These are the sessions people can book with you. Set the format, length, and price for each one."
+        />
+        <PracticeNav current="sessions" />
         <div className="mt-10">
           <SessionsManager
             sessionTypes={sessionTypes}
