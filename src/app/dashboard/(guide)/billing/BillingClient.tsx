@@ -155,7 +155,7 @@ export default function BillingClient({
             <div className="mt-4">
               <p className="caption text-dark">
                 {subscription?.cycle === 'annual' ? 'Annual billing' : 'Monthly billing'}
-                {subscription?.status ? ` — ${subscription.status}` : ''}
+                {subscription?.status ? `, ${subscription.status}` : ''}
               </p>
               {subscription?.status === 'trialing' && trialLabel && (
                 <p className="caption mt-2 text-dark">

@@ -61,7 +61,7 @@ const demoPractitioners = [
     tagline: 'Somatic breathwork for nervous-system regulation',
     bio: 'Maya guides embodied breathwork journeys that help you meet stored tension with steadiness. Sessions blend slow, paced breathing with gentle somatic tracking.',
     subscription_tier: 'alchemist',
-    preferredModalitySlugs: ['breathwork', 'somatic-experiencing'],
+    preferredModalitySlugs: ['breathwork', 'somatic-therapy'],
     sessionTypes: [
       {
         name: 'Breathwork Journey (Virtual)',
@@ -115,7 +115,7 @@ const demoPractitioners = [
     tagline: 'Meditation and mindfulness for busy minds',
     bio: 'Eli teaches practical mindfulness for people who think they cannot meditate. Expect grounded, secular guidance and plenty of room to be exactly where you are.',
     subscription_tier: 'free',
-    preferredModalitySlugs: ['meditation', 'mindfulness'],
+    preferredModalitySlugs: ['meditation', 'hypnotherapy'],
     sessionTypes: [
       {
         name: 'Intro to Meditation',

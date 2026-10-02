@@ -10,8 +10,8 @@ export const metadata = { title: `booking | ${BRAND_NAME}` }
 
 const STATUS_LABEL: Record<string, string> = {
   confirmed: 'CONFIRMED',
-  pending_payment: 'HELD — AWAITING PAYMENT',
-  pending_approval: 'HELD — AWAITING CONFIRMATION',
+  pending_payment: 'HELD, AWAITING PAYMENT',
+  pending_approval: 'HELD, AWAITING CONFIRMATION',
   cancelled: 'CANCELLED',
   completed: 'COMPLETED',
 }

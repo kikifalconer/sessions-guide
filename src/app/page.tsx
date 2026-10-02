@@ -27,7 +27,7 @@ import ScrubScale from '@/components/motion/ScrubScale'
 const META_DESCRIPTION =
   'A booking platform for transformational and healing sessions: ceremonies, readings, treatments, healings, and journeys.'
 
-// COPY NEEDED: page title concept for /.
+// Page title concept for / is still undecided.
 //
 // Every other route sets a lowercase concept and buildMetadata appends the
 // brand ("{concept} | guides’space"). No approved string exists for this

@@ -58,7 +58,7 @@ const PILLARS_INTRO = 'Three things stay fully yours.'
 const PILLARS: { title: string; body: string }[] = [
   {
     title: 'Your money.',
-    body: 'We take no comission ever. And we give you the power to choose how you get paid. Through our platform, or inperson, through a method you prefer, or You control how you get paid, whether through our platform, in person, or through your preferred method. That way you can keep your finances secret or keep them automated. Take payment online, in person, or by donation. Set your own rates and terms. We never take a commission.',
+    body: 'We never take a commission. You choose how you get paid: through the platform, in person, or by a method you prefer. That can stay automated, or stay between you and your client. Set your own rates and terms, including donation.',
   },
   {
     title: 'Your place.',
@@ -309,9 +309,10 @@ export default function JoinSessionsPage() {
           </RevealLines>
           <RevealBlock stagger="base" className="flex flex-col gap-8">
             <p className="t-body text-dark">{ORIGIN.body}</p>
-               <p className="t-body text-dark">{ORIGIN.close}</p>
-                <p className="t-eyebrow max-w-[68ch] text-dark opacity-70">{ORIGIN.footnote}</p>
-        
+            <p className="t-body text-dark">{ORIGIN.close}</p>
+            {ORIGIN.footnote ? (
+              <p className="t-eyebrow max-w-[68ch] text-dark opacity-70">{ORIGIN.footnote}</p>
+            ) : null}
           </RevealBlock>
         </SectionWithPhoto>
 
