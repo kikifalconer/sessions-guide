@@ -379,7 +379,10 @@ body {
    only size/weight/spacing — never repeat font-family or text-transform
    here again, or casing gains a second source. Scope is h1-h3 only: h4 was
    never part of the uppercase treatment, so it stays on --font-body rather
-   than half-adopting the heading font without the casing that goes with it. */
+   than half-adopting the heading font without the casing that goes with it.
+   @layer base so Tailwind text-* utilities (text-light, text-white, text-cream)
+   still win on photo and olive backgrounds. */
+@layer base {
 h1,
 h2,
 h3 {
@@ -399,6 +402,7 @@ h2 {
   font-size: clamp(1.1rem, 3vw, 2.5rem);
   line-height: 1.;
   letter-spacing: 0.01em;
+  color: var(--color-olive);
 }
 
 h3 {
@@ -421,6 +425,7 @@ h6 {
   line-height: 1.4;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
 }
 
 p {

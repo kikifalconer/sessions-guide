@@ -11,7 +11,7 @@ import {
 
 function navLinkClass(active: boolean): string {
   return [
-    'flex min-h-[44px] shrink-0 items-center border-l-2 px-6 py-3 text-left outline-none',
+    'flex min-h-[44px] shrink-0 items-center border-l-2 px-6 py-2.5 text-left outline-none',
     'font-body font-light uppercase tracking-[0.06em] text-[1.14rem] leading-[1.65]',
     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-cream',
     active ? 'border-citron text-citron' : 'border-transparent text-cream hover:text-citron',
@@ -54,19 +54,19 @@ export default function DashboardChrome({
         <Link
           href="/"
           aria-label={`${BRAND_NAME} home`}
-          className="hidden w-[300px] md:block"
+          className="hidden w-full px-8 pt-8 pb-10 md:block"
         >
           <Image
             src="/guidesspace-logo-cream.png"
             alt={BRAND_NAME}
             width={300}
             height={27}
-            className="h-auto w-[300px]"
+            className="h-auto w-full"
             priority
           />
         </Link>
 
-        <nav aria-label="Dashboard" className="hidden flex-1 md:flex md:flex-col">
+        <nav aria-label="Dashboard" className="hidden flex-1 md:flex md:flex-col md:gap-4">
           {items.map((item) => {
             const isActive = isDashboardNavActive(pathname, item)
             return (

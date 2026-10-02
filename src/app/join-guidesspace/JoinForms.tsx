@@ -77,10 +77,10 @@ export default function JoinForms({ delay = 0 }: { delay?: number }) {
       {/* Waitlist */}
       <div className="w-full sm:max-w-[320px]">
         {waitlistState === 'done' ? (
-          <p className="t-eyebrow text-light">{"You're on the list."}</p>
+          <p className="t-eyebrow text-white">{"You're on the list."}</p>
         ) : (
           <>
-            <p className="t-eyebrow mb-4 text-light">APPLY FOR AN INVITATION</p>
+            <p className="t-eyebrow mb-4 text-white">APPLY FOR AN INVITATION</p>
             <form onSubmit={submitWaitlist} className="flex flex-col gap-3">
               <input
                 type="email"
@@ -99,7 +99,7 @@ export default function JoinForms({ delay = 0 }: { delay?: number }) {
               </button>
             </form>
             {waitlistState === 'error' && (
-              <p className="t-eyebrow mt-3 text-light">Something went wrong. Try again.</p>
+              <p className="t-eyebrow mt-3 text-white">Something went wrong. Try again.</p>
             )}
           </>
         )}
@@ -107,7 +107,7 @@ export default function JoinForms({ delay = 0 }: { delay?: number }) {
 
       {/* Invitation code */}
       <div className="w-full sm:max-w-[320px]">
-        <p className="t-eyebrow mb-4 text-light">ENTER INVITATION CODE</p>
+        <p className="t-eyebrow mb-4 text-white">ENTER INVITATION CODE</p>
         <form onSubmit={submitCode} className="flex flex-col gap-3">
           <input
             type="text"
@@ -125,7 +125,7 @@ export default function JoinForms({ delay = 0 }: { delay?: number }) {
           </button>
         </form>
         {codeState === 'invalid' && (
-          <p className="t-eyebrow mt-3 text-light">{"That code isn't recognised."}</p>
+          <p className="t-eyebrow mt-3 text-white">{"That code isn't recognised."}</p>
         )}
       </div>
     </RevealBlock>
