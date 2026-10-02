@@ -211,7 +211,7 @@ export function buildDigest(
   const noun = anomalies === 1 ? 'anomaly' : 'anomalies'
   const subject = anomalies > 0 ? `Daily ops digest: ${anomalies} ${noun}` : 'Daily ops digest: clear'
 
-  const lines: string[] = ['Daily ops digest for sessions.guide.', '']
+  const lines: string[] = ['Daily ops digest for guides’space.', '']
   lines.push(
     anomalies > 0
       ? `${anomalies} ${noun} across ${checks.length} checks.`
@@ -248,7 +248,7 @@ export async function sendDigest(subject: string, text: string): Promise<boolean
     console.error('[anomaly-watcher] email not configured; RESEND_API_KEY or RESEND_FROM_EMAIL missing')
     return false
   }
-  const to = process.env.REPORT_NOTICE_EMAIL ?? 'hello@sessions.guide'
+  const to = process.env.REPORT_NOTICE_EMAIL ?? 'hello@guidesspace.com'
   const resend = new Resend(apiKey)
   try {
     const { error } = await resend.emails.send({ from, to, subject, text })

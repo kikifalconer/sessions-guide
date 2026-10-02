@@ -52,7 +52,7 @@ export default function StepBio({
             rows={10}
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            className="w-full resize-y border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive"
+            className="w-full resize-y border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
           />
         </div>
 

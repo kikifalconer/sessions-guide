@@ -29,8 +29,8 @@ function normalizeUrl(value: string): string | null {
 // Step 1. Creates the auth user, then the practitioners row keyed by the
 // auth user id. full_name and slug are NOT NULL in the schema, so the row
 // starts with an empty name and the user id as a placeholder slug. Step 2
-// replaces both. subscription_tier starts null and is set to 'basic' at
-// step 6, which doubles as the onboarding completion marker.
+// replaces both. subscription_tier stays null until step 6 sets 'elevated',
+// which doubles as the onboarding completion marker (D24 retired 'basic').
 export async function signUpWithEmail(
   email: string,
   password: string
@@ -234,8 +234,36 @@ export async function savePhotoUrl(
   return { ok: true }
 }
 
+// Records the three profile links without touching tier. Used by the
+// practice profile editor after onboarding; step 6 still owns the tier write.
+export async function saveLinks(
+  link1: string,
+  link2: string,
+  link3: string
+): Promise<ActionResult> {
+  const user = await getSessionUser()
+  if (!user) return { ok: false, error: 'Sign in to continue.' }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('practitioners')
+    .update({
+      link_1: normalizeUrl(link1),
+      link_2: normalizeUrl(link2),
+      link_3: normalizeUrl(link3),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', user.id)
+
+  if (error) return { ok: false, error: GENERIC_ERROR }
+  return { ok: true }
+}
+
 // Step 6. Sets the tier directly. No Stripe Checkout, no subscriptions
 // table write during the invite-only phase. See decisions.md.
+// D24 replaced basic/premium with free/elevated/alchemist. Invite-only
+// completion grants 'elevated' (comped, no subscription row), the same
+// grandfathering applied to practitioners who were already 'basic'.
 export async function completeOnboarding(
   link1: string,
   link2: string,
@@ -251,7 +279,7 @@ export async function completeOnboarding(
       link_1: normalizeUrl(link1),
       link_2: normalizeUrl(link2),
       link_3: normalizeUrl(link3),
-      subscription_tier: 'basic',
+      subscription_tier: 'elevated',
       updated_at: new Date().toISOString(),
     })
     .eq('id', user.id)

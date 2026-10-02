@@ -2,7 +2,7 @@ import SiteHeader from '@/components/site-header'
 import ContactForm from '@/components/contact-form'
 
 export const metadata = {
-  title: 'contact | sessions.guide',
+  title: 'contact | guides’space',
 }
 
 export default function ContactPage() {
@@ -28,13 +28,13 @@ export default function ContactPage() {
             <p className="label mb-4 text-dark">ELSEWHERE</p>
             <div className="flex flex-col gap-3">
               <a
-                href="mailto:hello@sessions.guide"
+                href="mailto:hello@guidesspace.com"
                 className="text-dark underline underline-offset-4 hover:text-olive"
               >
-                hello@sessions.guide
+                hello@guidesspace.com
               </a>
               <a
-                href="https://instagram.com/sessionsguide"
+                href="https://instagram.com/guidesspace"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-dark underline underline-offset-4 hover:text-olive"

@@ -55,25 +55,33 @@ We believe. We do not preach.
 **Insider terms to use naturally:** seekers (for the audience), session (not appointment or booking), modality (not service or treatment), availability block (internal/dashboard only, not seeker-facing)
 
 ---
-## Roles & Terminology (updated July 2026)
+## Roles & Terminology (updated August 2026)
 
 | Term | Meaning | Rules |
 |---|---|---|
 | Practitioner | Provider listed on the platform | Never call a practitioner a "guide" |
 | Seeker | A person browsing or booking | Internal + copy term. In navigation and headers, prefer role-neutral task language over the label (see below) |
-| Guide | Invite-only community curator (formerly "Sage") | "Guide" capitalized, noun only, reserved for this role. "Guides" replaces "Sages" in all display copy |
+| Sage | Invite-only community curator | "Sage" capitalized, noun only, reserved for this role. Display copy says Sages, matching the `sages` table and the `/sages` route |
 | Client | A practitioner's client | Practitioner-dashboard contexts only ("your clients"). Never platform-wide |
 
-**"Guide" usage:** As a noun, only ever the curator role. As a verb, sparingly, and never
-in a way that implies practitioners are Guides ("she guides breathwork" — avoid;
-"let reviews guide you" — acceptable, rare).
+**Reverted, August 2026:** the July 2026 entry renamed this role from Sage to Guide in
+display copy. That is withdrawn. The platform is now **Guides' Space**, so "Guide" as a
+role noun would collide with the company name in the same sentence. The curator role is
+**Sage** again, which is also what the code has always said, so nothing in `src/` had to
+change.
+
+**"Guide" usage:** reserved for the brand ("Guides' Space") and for editorial guides
+(the `/guides/[slug]` articles). Never a person. As a verb, sparingly, and never in a
+way that implies practitioners are guides ("she guides breathwork" — avoid; "let reviews
+guide you" — acceptable, rare).
 
 **Role-neutral surface labels:** In nav, help, and section headers, describe the task,
 not the audience. "Help finding & booking sessions" not "For seekers."
 "List your practice" not "For practitioners." The role words are for prose, not chrome.
 
-**Code freeze:** `sages` table, `seeker_id`, `seeker_token`, and all code identifiers
-keep their existing names. This is a display-language change only.
+**Code and display now agree:** `sages` table, the `/sages` route, `seeker_id`,
+`seeker_token` and all code identifiers keep their names, and display copy says Sage
+too. There is no longer a split between the two.
 
 ---
 

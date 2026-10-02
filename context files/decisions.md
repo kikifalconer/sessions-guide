@@ -20,6 +20,8 @@ Running log of decisions made. Consult before generating code that touches these
 
 **Rate limiting on public actions (D22).** Pre-boards gate. Must land before or with discussion boards.
 
+**TD12 — Two applied type scales, one token set (redesign transition).** The redesign type scale (`--text-display`, `--text-h2`, `--text-h3`, `--text-lede`, `--text-body`, `--text-eyebrow`, plus `--container-lede/body` and `--spacing-gutter/section`) is defined once in `@theme` in `globals.css` and applied ONLY through the `.t-*` classes, which only the redesigned routes use. The `h1`–`h6` element selectors still carry the original scale, because ~23 other routes render those tags and have not been redesigned. This duplication is deliberate and time-boxed, not an accident: it keeps the redesign from silently resizing every other page. **Resolution path:** once the remaining routes are redesigned, point the `h1`/`h2`/`h3` element selectors at the same tokens and delete the `.t-*` wrappers. That is a few-line edit precisely because there is one token set. **Gate:** do not add a second token set, and do not restyle the element selectors piecemeal.
+
 **TD11 — Formalize admin role before a second admin exists.** The pages system (D27) gates admin editing on a single hard-coded `ADMIN_USER_ID` env var, fail-closed. This is fine for one admin (Kiki) but does not scale: a second admin, an audit trail of who edited what, or per-action authorization all require a real admin role (an `is_admin` flag or an `admins` table with RLS). **Gate:** replace the env check with a proper admin role before granting any second person admin access. No `created_by`/`updated_by` attribution is recorded on `pages`/`page_blocks` yet either.
 
 **TD10 — Email send-result inspection.** The Resend SDK returns API errors in the response object (`{ data, error }`) rather than throwing; send helpers previously wrapped the call in try/catch only, so an API-level rejection returned as success and callers stamped their sent-flag anyway, suppressing the intended retry. A failed send was durably recorded as sent. Repo-wide pattern (trial reminders, review-request, and any other send site). Fix: helpers inspect `error`, return `false` on failure, log the failure; callers stamp their sent-flag only on genuine success, so a failed send retries on the next tick. Retry is bounded naturally by each query's window (trialing subscriptions by `trial_end`; review requests by their own window). Any send site lacking a natural retry bound is flagged for a follow-up decision on explicit attempt-capping. No schema change in this pass.
@@ -330,7 +332,7 @@ The Google Calendar connect flow (`/api/google/connect` → OAuth consent → ca
 
 Consequence: minor UX gap, not a functional one. A practitioner who connects will not see confirmation until they navigate to SETTINGS. No data or sync impact.
 
-Fix: requires making the dashboard tabs URL-driven (today they are client-side `useState` toggles in `DashboardShell.tsx`) so the callback can redirect to a SETTINGS URL. Deliberately out of scope when the SETTINGS connect/disconnect panel was built. Low priority, cosmetic. Lives in the deferred-UI pile alongside the no-shareable-confirmation-page and on-screen-self-cancel items (D1).
+Fix: the dashboard tabs are URL-driven now — real routes, not the client-side `useState` toggles in `DashboardShell.tsx` this note originally described (that file no longer exists). The calendar panel lives on `/dashboard/account` today (folded in when PROFILE became ACCOUNT). Remaining question: the callback (`src/app/api/google/callback/route.ts`) still redirects to `/dashboard/profile`, which itself now redirects to `/dashboard/account` — the flow resolves, just via one extra hop. The hardcoded target should point at `/dashboard/account` directly. Low priority, cosmetic. Lives in the deferred-UI pile alongside the no-shareable-confirmation-page and on-screen-self-cancel items (D1).
 
 ## TD3 — Public discovery reads bypass RLS (service-role, no anon policy) (June 2026)
 
@@ -537,7 +539,30 @@ Editing is **admin-only via an interim env gate**: authenticated user whose `use
 
 ---
 
-## Terminology — Sage → Guide, Seeker retained (July 2026)
+## Terminology — curator role is Sage (August 2026, reverses the July entry below)
+
+**Decision:** The curator role is **Sage**. The July 2026 rename to "Guide" is
+withdrawn before it ever shipped.
+
+**Rationale:** The platform is now **Guides' Space**. The July decision's stated
+reason was that "Guide" aligned the curator role with the `sessions.guide` name;
+that name no longer exists, so the rationale is void. Worse, keeping it would put
+the company name and a role noun in the same sentence with different meanings
+("a Guide on Guides' Space"), which no amount of capitalisation rescues.
+
+**Implications:** None in code. The rename was logged but never implemented, so
+`src/` still said Sage everywhere: the `sages` table, the `/sages` route,
+`sagePageJsonLd`, `getSage`, `getSageRecommendations`, and the `SAGES` nav label.
+Zero display strings called curators Guides. Copy task A6 (the rename sweep) is
+cancelled in `content-copy-tasks.md` rather than completed.
+
+**"Guide" is now reserved for two other things:** the brand ("Guides' Space") and
+editorial guides (the `/guides/[slug]` articles, which are content pages and were
+never the curator role). Practitioners are still never called guides.
+
+---
+
+## Terminology — Sage → Guide, Seeker retained (July 2026) — REVERSED, see above
 
 **Decision:** The curator role is renamed "Guide" in all display copy. "Seeker"
 is retained as the term for the booking-side audience. "Client" is reserved for
@@ -570,3 +595,58 @@ jurisdictions.
 and future per-practitioner no-show counts on the client record (visible only
 to that practitioner). Platform-internal abuse signals, if ever built, are
 ops-only and never surfaced.
+
+---
+
+## Landing page rebuild + /join-sessions rename (August 2026)
+
+**Decision:** `/` was rebuilt from `docs/mockups/landing page@2x.png` on
+`redesign/phase-1-motion-system`. Four things worth a durable record:
+
+**1. `/` is no longer header-free.** The prior "Shared Site Header" entry
+(June 2026) chose to keep `/` header-free specifically to avoid forcing the
+route dynamic (`SiteHeader` calls Supabase `getUser()`). The new mockup has
+a nav bar over the hero, so `/` now renders `<SiteHeader variant="landing" />`
+and accepts the same dynamic-route tradeoff every other `SiteHeader` page
+already does. That June entry is superseded on this point only — nothing
+else in it changes.
+
+**2. `/join-sessions` is renamed `/join-guidesspace`,** and the waitlist +
+invite-code capture (formerly `HoldingForms` on `/`) moved there as
+`JoinForms`, replacing the page's two "Request an invitation" mailto CTAs
+(which were explicitly marked as a placeholder pending a real mechanism).
+No redirect from the old path exists yet — there's no live traffic to
+preserve pre-launch, but whoever deploys this rename first should add one.
+`RESERVED_SLUGS` in `src/lib/slug.ts` keeps both `join-sessions` and
+`join-guidesspace` reserved.
+
+**3. BRAND-13 (`src/lib/brand.ts`) is partially complete.** It's the source
+of truth for `BRAND_NAME`/`BRAND_NAME_HTML`/`BRAND_DOMAIN`/
+`BRAND_EMAIL_DOMAIN`, used in every file this rebuild touched. It was **not**
+retrofitted into the ~30 other files that still hand-type "guides’space"
+today (`src/app/layout.tsx`, `src/lib/metadata.ts`,
+`src/lib/seo/structuredData.tsx`, most route `page.tsx` files, etc. — run
+`grep -rln "guides['’]space" src/ --include=*.tsx --include=*.ts` for the
+live list). That retrofit is a separate, not-yet-scheduled pass.
+
+**4. Terminology clarified: "guide" is the brand's primary term for
+practitioners; "practitioner" remains an acceptable synonym in copy.** This
+is narrower than it might look next to the "Terminology — curator role is
+Sage" entry above — that entry is about the **curator/Sage role noun**
+specifically ("Guide" must not be used for a Sage, to avoid "a Guide on
+Guides' Space"). It does not forbid using "guide" for the general
+practice-running population. Applied this pass: `/join-guidesspace`'s meta
+description, hero eyebrow, origin body, close note, and FAQ heading
+(practitioner → guide, 5 instances), and the new landing page's mission
+section ("conscious practitioners" → "conscious guides"). Both pages still
+say "practitioner" elsewhere (e.g. `/join-guidesspace`'s H1 context and
+most of its body copy) — untouched, and that's fine per this entry.
+
+---
+
+## Rebrand tracking moved to a dedicated register (August 2026)
+
+BRAND-n items (rebrand constants, route renames, lexicon) are now tracked in
+`docs/rebrand-migration.md`, not here. Standalone audit findings go in
+`docs/audit-findings.md`. This entry is a pointer only — no existing content
+above has moved or been edited.

@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import SiteHeader from '@/components/site-header'
 import PractitionerCard from '@/components/PractitionerCard'
 import { DISCOVERY_HOME } from '@/lib/routes'
 import {
@@ -9,6 +8,7 @@ import {
   type SearchFormat,
 } from '@/lib/discovery'
 import { buildMetadata } from '@/lib/metadata'
+import AppOrPublicShell from '@/components/dashboard/AppOrPublicShell'
 
 export const metadata = buildMetadata({
   concept: 'search',
@@ -45,8 +45,8 @@ export default async function SearchPage({
   const hasFilters = Boolean(modalitySlug || citySlug || inPersonOnly)
 
   return (
+    <AppOrPublicShell>
     <main className="min-h-screen bg-bg">
-      <SiteHeader />
 
       <div className="mx-auto w-full max-w-[1200px] px-6 py-12">
         <nav className="caption mb-6 text-dark" aria-label="Breadcrumb">
@@ -56,6 +56,8 @@ export default async function SearchPage({
           <span className="px-2 opacity-50">›</span>
           <span>SEARCH</span>
         </nav>
+
+        <h1 className="mb-2">Search sessions</h1>
 
         <h2 className="mb-8">Search</h2>
 
@@ -131,5 +133,6 @@ export default async function SearchPage({
         )}
       </div>
     </main>
+    </AppOrPublicShell>
   )
 }

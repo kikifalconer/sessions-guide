@@ -1,13 +1,12 @@
 // src/lib/seo/structuredData.tsx
-// JSON-LD builders for sessions.guide. Server-side only (no client imports).
+// JSON-LD builders for guides’space. Server-side only (no client imports).
 // Every builder returns a plain object; render via <JsonLd data={...} /> below.
 //
 // Schema references: schema.org Person, Service, Offer, AggregateRating,
 // CollectionPage, ItemList, BreadcrumbList, WebSite, Organization.
 
 import { getSiteUrl } from '@/lib/siteUrl'
-
-const SITE_NAME = 'sessions.guide'
+import { BRAND_NAME } from '@/lib/brand'
 
 // ---------- shared types (mirror schema.md, minimal fields only) ----------
 
@@ -46,7 +45,7 @@ export function organizationJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     '@id': `${SITE_URL}/#organization`,
-    name: SITE_NAME,
+    name: BRAND_NAME,
     legalName: 'Sessions Guide Inc.',
     url: SITE_URL,
     description:
@@ -61,7 +60,7 @@ export function organizationJsonLd() {
       addressRegion: 'BC',
       addressCountry: 'CA',
     },
-    sameAs: ['https://www.instagram.com/sessionsguide'],
+    sameAs: ['https://www.instagram.com/guidesspace'],
   }
 }
 
@@ -71,7 +70,7 @@ export function webSiteJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     '@id': `${SITE_URL}/#website`,
-    name: SITE_NAME,
+    name: BRAND_NAME,
     url: SITE_URL,
     publisher: { '@id': `${SITE_URL}/#organization` },
     // No SearchAction: /search is filter-only (modality/city/in_person), with no
@@ -264,6 +263,31 @@ export function sagePageJsonLd(opts: {
       name: opts.sageName,
       ...(opts.image ? { image: opts.image } : {}),
     },
+  }
+}
+
+// ---------- FAQ ----------
+
+// Built from the SAME array the page renders, never a hand-maintained copy, so
+// the answers a crawler reads can never drift from the answers a person reads.
+// Answers must be plain text: schema.org Answer.text is not markup.
+export function faqPageJsonLd(opts: {
+  url: string
+  items: { question: string; answer: string }[]
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    '@id': `${opts.url}#faq`,
+    isPartOf: { '@id': `${getSiteUrl()}/#website` },
+    mainEntity: opts.items.map((it) => ({
+      '@type': 'Question',
+      name: it.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: it.answer,
+      },
+    })),
   }
 }
 

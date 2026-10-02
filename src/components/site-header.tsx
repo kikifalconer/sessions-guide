@@ -3,25 +3,44 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { resolveAuthDestination } from '@/lib/authDestination'
 import HeaderNav, { type NavLink } from './header-nav'
+import { BRAND_NAME } from '@/lib/brand'
 
 // Shared site header.
-//   <SiteHeader />                     regular pages: inline links on desktop,
-//                                      hamburger on mobile.
+//   <SiteHeader />                     regular pages: wordmark-left, inline
+//                                      links on desktop, hamburger on mobile.
 //   <SiteHeader centerLabel={name} />  profile pages: centered name, hamburger
 //                                      at all widths.
+//   <SiteHeader variant="landing" />   the homepage hero: no wordmark (the
+//                                      hero image below carries it), centered
+//                                      nav, transparent/light-on-photo theme.
 //
 // Held-out links are one-line `live: false` entries; flip to true when the
 // page ships. SEARCH renders as a magnifier on desktop and a labeled row in
 // the menu.
 const LINKS: NavLink[] = [
-  { label: 'EXPLORE', href: '/', live: false },
+  { label: 'EXPLORE', href: '/explore', live: false },
   { label: 'SEARCH', href: '/search', live: true },
-  { label: 'FOR PRACTITIONERS', href: '/join', live: false },
+  { label: 'FOR GUIDES', href: '/join-guidesspace', live: true },
   { label: 'SAGES', href: '/sages', live: false },
   { label: 'ABOUT', href: '/about', live: false },
 ]
 
-export default async function SiteHeader({ centerLabel }: { centerLabel?: string }) {
+// Landing header's centered nav (mockup: ABOUT · JOIN · BOOK A SESSION ·
+// LOG IN — LOG IN comes from the authSlot HeaderNav appends automatically).
+// ABOUT and BOOK A SESSION stay held out — neither has a real route yet.
+const LANDING_LINKS: NavLink[] = [
+  { label: 'ABOUT', href: '/about', live: false },
+  { label: 'JOIN', href: '/join-guidesspace', live: true },
+  { label: 'BOOK A SESSION', href: '/explore', live: false },
+]
+
+export default async function SiteHeader({
+  centerLabel,
+  variant = 'default',
+}: {
+  centerLabel?: string
+  variant?: 'default' | 'landing'
+}) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -41,16 +60,41 @@ export default async function SiteHeader({ centerLabel }: { centerLabel?: string
     authSlot = { label: 'LOG IN', href: '/login' }
   }
 
-  const links = LINKS.filter((l) => l.live)
+  if (variant === 'landing') {
+    // Pixel-sampled from the mockup: this nav sits on a flat bone bar above
+    // the hero photo (not transparent over it), with the same olive-on-bone
+    // treatment as the default header — only the wordmark (omitted; the hero
+    // image below carries it) and the centering are different.
+    const links = LANDING_LINKS.filter((l) => l.live)
+    return (
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-bg px-3 py-4 sm:px-6 sm:py-5">
+        <div />
+        <HeaderNav links={links} authSlot={authSlot} alwaysHamburger={false} centered />
+        <div />
+      </header>
+    )
+  }
+
+  // FAVORITES only for a signed-in visitor (guides see it too -- they are
+  // valid seekers of other guides), placed immediately before the auth slot.
+  // Scoped to the default header only, not the landing variant's separate
+  // marketing nav.
+  const links = user
+    ? [...LINKS.filter((l) => l.live), { label: 'FAVORITES', href: '/account/favorites', live: true }]
+    : LINKS.filter((l) => l.live)
 
   return (
     <header className="flex items-center justify-between gap-2 bg-bg px-3 py-4 sm:px-6 sm:py-5">
       <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-        <Link href="/" aria-label="sessions.guide home" className="shrink-0">
+        <Link href="/" aria-label={`${BRAND_NAME} home`} className="shrink-0">
+          {/* Sage mark: dark lettering, for the light header field. Dimensions
+              carry the PNG's real 7.12:1 aspect (7689x1080) rather than the old
+              SVG's 4.93:1, so it is not stretched; next/image serves a 2x
+              srcset from the large source, so it stays crisp. */}
           <Image
-            src="/sessions-logo.svg"
-            alt="sessions.guide"
-            width={138}
+            src="/guidesspace-logo-sage.png"
+            alt={BRAND_NAME}
+            width={199}
             height={28}
             priority
           />
@@ -59,7 +103,7 @@ export default async function SiteHeader({ centerLabel }: { centerLabel?: string
         {centerLabel && (
           <>
             <Image src="/x.svg" alt="" width={28} height={28} className="shrink-0" />
-            <span className="min-w-0 truncate font-heading text-[16px] font-thin uppercase leading-none text-olive sm:text-[24px] md:text-[34px]">
+            <span className="min-w-0 truncate font-body text-[16px] font-thin uppercase leading-none text-olive sm:text-[24px] md:text-[34px]">
               {centerLabel}
             </span>
           </>

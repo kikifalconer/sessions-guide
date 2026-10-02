@@ -6,7 +6,7 @@ import { useState } from 'react'
 // distinguishes the two. Calm, directional states per brand voice.
 
 const FIELD =
-  'w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive'
+  'w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive'
 
 export default function ContactForm({ topic }: { topic: 'help' | 'contact' }) {
   const [name, setName] = useState('')
@@ -84,7 +84,7 @@ export default function ContactForm({ topic }: { topic: 'help' | 'contact' }) {
 
       {state === 'error' && (
         <p className="caption text-olive">
-          Something went wrong. Try again, or write to hello@sessions.guide.
+          Something went wrong. Try again, or write to hello@guidesspace.com.
         </p>
       )}
 

@@ -380,7 +380,7 @@ export async function sendReportNotice(input: ReportNoticeInput): Promise<void> 
   if (!apiKey || !from) return
   // Env-izable, with the current team address as the default (no second
   // hardcoded address accretes).
-  const to = process.env.REPORT_NOTICE_EMAIL ?? 'hello@sessions.guide'
+  const to = process.env.REPORT_NOTICE_EMAIL ?? 'hello@guidesspace.com'
 
   const resend = new Resend(apiKey)
   // Fire-and-forget: deliver() logs a failure but never throws, so notification

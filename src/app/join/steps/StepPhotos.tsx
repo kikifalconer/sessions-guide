@@ -101,7 +101,7 @@ export default function StepPhotos({
 
       <div className="mb-10">
         <p className="label mb-2 text-dark">PROFILE PHOTO</p>
-        <div className="relative h-36 w-36 overflow-hidden rounded-full border border-border bg-surface">
+        <div className="relative h-36 w-36 overflow-hidden border border-border bg-surface">
           {photo.url && (
             <Image
               src={faceCrop(photo.url, 288)}

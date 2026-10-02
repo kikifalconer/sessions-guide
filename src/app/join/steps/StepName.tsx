@@ -52,7 +52,7 @@ export default function StepName({
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive"
+            className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
           />
         </div>
 
@@ -66,7 +66,7 @@ export default function StepName({
             value={tagline}
             onChange={(e) => setTagline(e.target.value)}
             placeholder="One line seekers will see under your name"
-            className="w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive"
+            className="w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive"
           />
         </div>
 

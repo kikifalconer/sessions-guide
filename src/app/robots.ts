@@ -15,8 +15,8 @@ const DISALLOWED = [
   '/login',
   // Invite gate — no SEO value, keeps invite URLs out of indexes. Anchored with
   // `$` and paired with the trailing-slash form so this blocks /join and /join/*
-  // WITHOUT also blocking /join-sessions, which is a public marketing page that
-  // must stay crawlable. A bare `/join` prefix matches /join-sessions too.
+  // WITHOUT also blocking /join-guidesspace, which is a public marketing page
+  // that must stay crawlable. A bare `/join` prefix matches /join-guidesspace too.
   '/join$',
   '/join/',
   '/onboarding',

@@ -63,7 +63,7 @@ type Props = {
 type Step = 'time' | 'format' | 'signin' | 'details' | 'payment' | 'done'
 
 const fieldClass =
-  'w-full border border-border bg-surface px-4 py-3 font-heading font-light text-dark outline-none focus:border-olive'
+  'w-full border border-border bg-surface px-4 py-3 font-body font-light text-dark outline-none focus:border-olive'
 
 function priceLabel(st: SessionTypeView): string | null {
   if (st.pricingModel === 'fixed' && st.price) return `$${st.price.toFixed(2)}`
@@ -329,7 +329,7 @@ export default function BookingFlow(props: Props) {
             {bookedFormat === 'virtual' ? 'Virtual' : `In person${city ? ` in ${city}` : ''}`}
           </p>
           <p className="mb-6">
-            Booking uses your sessions.guide account. Enter your email and we
+            Booking uses your guides’space account. Enter your email and we
             will send you a sign in link. Your selected time is kept for when
             you return.
           </p>
