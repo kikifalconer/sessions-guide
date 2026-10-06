@@ -2,7 +2,7 @@ import Image from 'next/image'
 import SiteHeader from '@/components/site-header'
 
 export const metadata = {
-  title: 'the mission | sessions.guide',
+  title: 'the mission | guides’space',
 }
 
 export default function MissionPage() {
@@ -13,7 +13,7 @@ export default function MissionPage() {
         <section className="px-6 pt-20 text-center sm:pt-28">
           <h1>The Mission</h1>
           <p className="mx-auto mt-8 max-w-[52ch] text-dark">
-            Sessions Guide exists so the people who hold space for others can be
+            guides’space exists so the people who hold space for others can be
             held too.
           </p>
         </section>

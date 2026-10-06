@@ -10,10 +10,10 @@ import { getPublishedPage } from '@/lib/pagesData'
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const result = await getPublishedPage(slug, 'editorial')
-  if (!result) return { title: 'sessions.guide' }
+  if (!result) return { title: 'guides’space' }
   const { page } = result
   return {
-    title: page.seo_title ?? `${page.title} | sessions.guide`,
+    title: page.seo_title ?? `${page.title} | guides’space`,
     description: page.seo_description ?? undefined,
   }
 }

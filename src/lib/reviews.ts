@@ -22,6 +22,21 @@ export type PractitionerReviews = {
   reviewCount: number
 }
 
+// TD8: rating math shared by every caller that aggregates reviews, so a
+// fourth inline copy never has to happen again. Rounds to 1 decimal, same
+// as this file's own prior inline version.
+export function aggregateRatings(reviews: { rating: number }[]): {
+  avgRating: number | null
+  reviewCount: number
+} {
+  const reviewCount = reviews.length
+  const avgRating =
+    reviewCount > 0
+      ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviewCount) * 10) / 10
+      : null
+  return { avgRating, reviewCount }
+}
+
 export async function reviewsForPractitioner(slug: string): Promise<PractitionerReviews | null> {
   const admin = createAdminClient()
 
@@ -51,12 +66,6 @@ export async function reviewsForPractitioner(slug: string): Promise<Practitioner
     createdAt: r.created_at as string,
   }))
 
-  const reviewCount = reviews.length
-  const avgRating =
-    reviewCount > 0
-      ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviewCount) * 10) / 10
-      : null
-
   return {
     practitioner: {
       id: p.id as string,
@@ -65,7 +74,38 @@ export async function reviewsForPractitioner(slug: string): Promise<Practitioner
       photoUrl: (p.photo_url as string | null) ?? null,
     },
     reviews,
-    avgRating,
-    reviewCount,
+    ...aggregateRatings(reviews),
   }
+}
+
+// Guide-facing equivalent for the dashboard (D30 2b): same published-reviews
+// read and the same aggregateRatings() math as reviewsForPractitioner above,
+// but keyed by id (the caller already resolved and owns the practitioner via
+// requirePractitioner()) and with no practitioners.is_published gate -- a
+// guide must be able to see their own reviews while still in draft. Review
+// visibility itself is unchanged: is_published = true on the review row,
+// same as the public page.
+export async function reviewsForOwnPractitioner(
+  practitionerId: string
+): Promise<{ reviews: ReviewItem[]; avgRating: number | null; reviewCount: number }> {
+  const admin = createAdminClient()
+
+  const { data: rows } = await admin
+    .from('reviews')
+    .select('id, reviewer_name, rating, body, is_featured, created_at')
+    .eq('practitioner_id', practitionerId)
+    .eq('is_published', true)
+    .order('is_featured', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  const reviews: ReviewItem[] = (rows ?? []).map((r) => ({
+    id: r.id as string,
+    reviewerName: r.reviewer_name as string,
+    rating: r.rating as number,
+    body: (r.body as string | null) ?? null,
+    isFeatured: Boolean(r.is_featured),
+    createdAt: r.created_at as string,
+  }))
+
+  return { reviews, ...aggregateRatings(reviews) }
 }

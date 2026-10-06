@@ -491,3 +491,103 @@ export async function approvedModalities(): Promise<
     .sort((a, b) => a[1].sort - b[1].sort)
     .map(([category, v]) => ({ category, modalities: v.mods }))
 }
+
+export type DiscoverySession = {
+  id: string
+  practitionerId: string
+  name: string
+  durationMinutes: number
+  photoUrl: string | null
+  guideName: string
+  guideSlug: string
+  guidePhotoUrl: string | null
+  format: string
+  pricingModel: string
+  price: number | null
+  priceMin: number | null
+  priceMax: number | null
+  href: string
+  hasPsychedelic: boolean
+}
+
+function sessionHasPsychedelic(
+  modality: { slug: string; categories?: { slug: string } | null } | null
+): boolean {
+  if (!modality) return false
+  if (modality.slug === 'psychedelic-facilitation') return true
+  return modality.categories?.slug === 'journeys'
+}
+
+// Active session types for already-ranked published guides. Featured (Alchemist)
+// guides keep their discovery rank, so their sessions list first.
+export async function activeSessionsForGuides(
+  guides: PractitionerCardData[]
+): Promise<DiscoverySession[]> {
+  if (guides.length === 0) return []
+  const admin = createAdminClient()
+  const rankById = new Map(guides.map((g, i) => [g.id, i]))
+  const byId = new Map(guides.map((g) => [g.id, g]))
+
+  const { data } = await admin
+    .from('session_types')
+    .select(
+      'id, name, duration_minutes, photo_url, format, pricing_model, price, price_min, price_max, sort_order, practitioner_id, modalities ( slug, categories ( slug ) )'
+    )
+    .in('practitioner_id', guides.map((g) => g.id))
+    .eq('is_active', true)
+
+  const rows: (DiscoverySession & { sortOrder: number })[] = []
+  for (const row of data ?? []) {
+    const guide = byId.get(row.practitioner_id as string)
+    if (!guide) continue
+    const modality = row.modalities as unknown as
+      | { slug: string; categories: { slug: string } | null }
+      | null
+    const pricingModel = row.pricing_model as string
+    rows.push({
+      id: row.id as string,
+      practitionerId: guide.id,
+      name: row.name as string,
+      durationMinutes: row.duration_minutes as number,
+      photoUrl: (row.photo_url as string | null) ?? null,
+      guideName: guide.fullName,
+      guideSlug: guide.slug,
+      guidePhotoUrl: guide.photoUrl,
+      format: row.format as string,
+      pricingModel,
+      price: (row.price as number | null) ?? null,
+      priceMin: (row.price_min as number | null) ?? null,
+      priceMax: (row.price_max as number | null) ?? null,
+      href:
+        pricingModel === 'inquire'
+          ? `/${guide.slug}/inquire/${row.id as string}`
+          : `/${guide.slug}/book/${row.id as string}`,
+      hasPsychedelic: sessionHasPsychedelic(modality) || guide.hasPsychedelic,
+      sortOrder: (row.sort_order as number | null) ?? 0,
+    })
+  }
+
+  // Match the public profile cap (D26): free-tier guides only show their first
+  // active session type by sort_order.
+  const visible: DiscoverySession[] = []
+  const seenFree = new Set<string>()
+  rows.sort((a, b) => {
+    const rankA = rankById.get(a.practitionerId) ?? Number.MAX_SAFE_INTEGER
+    const rankB = rankById.get(b.practitionerId) ?? Number.MAX_SAFE_INTEGER
+    if (rankA !== rankB) return rankA - rankB
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder
+    return a.name.localeCompare(b.name)
+  })
+  for (const session of rows) {
+    const guide = byId.get(session.practitionerId)
+    if (guide?.tier === 'free') {
+      if (seenFree.has(session.practitionerId)) continue
+      seenFree.add(session.practitionerId)
+    }
+    const { sortOrder: _, ...publicSession } = session
+    void _
+    visible.push(publicSession)
+  }
+
+  return visible
+}

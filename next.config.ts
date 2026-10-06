@@ -21,4 +21,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        // /join-sessions was renamed to /join-guidesspace. Permanent: the
+        // rename is canonical, not a temporary detour.
+        source: "/join-sessions",
+        destination: "/join-guidesspace",
+        permanent: true,
+      },
+    ]
+  },
 };

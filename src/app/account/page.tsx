@@ -2,17 +2,14 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getSeekerProfile } from '@/lib/seekers'
 import { accountIdentity } from '@/lib/seekerIdentity'
-import { loadSeekerData } from '@/lib/seekerData'
-import SiteHeader from '@/components/site-header'
-import AccountShell from './AccountShell'
+import { BRAND_NAME } from '@/lib/brand'
+import SeekerSettings from '@/components/account/SeekerSettings'
+import PageHeader from '@/components/dashboard/PageHeader'
 
 export const metadata = {
-  title: 'your account | sessions.guide',
+  title: `your account | ${BRAND_NAME}`,
 }
 
-// Seeker dashboard (D20). Server-side auth guard, same shape as /dashboard.
-// A practitioner landing here sees their own seeker-side data — they are a
-// valid seeker — though the header routes them to /dashboard by default.
 export default async function AccountPage() {
   const supabase = await createClient()
   const {
@@ -21,21 +18,29 @@ export default async function AccountPage() {
 
   if (!user) redirect(`/login?next=${encodeURIComponent('/account')}`)
 
-  const [profile, identity, data] = await Promise.all([
+  const [profile, identity] = await Promise.all([
     getSeekerProfile(user.id),
     accountIdentity(user.id),
-    loadSeekerData(user.id),
   ])
 
   return (
-    <>
-      <SiteHeader />
-      <AccountShell
-        fullName={profile?.full_name ?? identity.name}
-        currentEmail={user.email ?? null}
-        newsletterOptIn={profile?.newsletter_opt_in ?? false}
-        data={data}
-      />
-    </>
+    <main className="px-6 py-12 sm:px-8">
+      <div className="mx-auto w-full max-w-[1200px]">
+        <PageHeader
+          title="Account"
+          description="Your name, email, and how we write to you."
+        />
+        <section className="mt-10">
+          <h2>Basic information</h2>
+          <div className="mt-6">
+            <SeekerSettings
+              initialFullName={profile?.full_name ?? identity.name}
+              initialNewsletterOptIn={profile?.newsletter_opt_in ?? false}
+              currentEmail={user.email ?? null}
+            />
+          </div>
+        </section>
+      </div>
+    </main>
   )
 }

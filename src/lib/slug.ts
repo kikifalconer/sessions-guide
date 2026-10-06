@@ -25,6 +25,7 @@ const RESERVED_SLUGS = new Set([
   // Marketing + legal routes.
   'mission',
   'join-sessions',
+  'join-guidesspace',
   'pricing',
   'help',
   'contact',

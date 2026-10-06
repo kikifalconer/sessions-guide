@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import InquiryForm from './InquiryForm'
 
-export const metadata = { title: 'inquire | sessions.guide' }
+export const metadata = { title: 'inquire | guides’space' }
 
 // Inquiry page. `/[slug]/inquire` is profile-level (About button → null
 // session, per D11); `/[slug]/inquire/[sessionTypeId]` carries session context

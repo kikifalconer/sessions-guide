@@ -39,7 +39,7 @@ export default function ReportReview({ reviewId }: { reviewId: string }) {
         onChange={(e) => setReason(e.target.value)}
         rows={2}
         maxLength={2000}
-        className="w-full border border-border bg-surface px-3 py-2 font-heading font-light text-[0.85rem] text-dark outline-none focus:border-olive"
+        className="w-full border border-border bg-surface px-3 py-2 font-body font-light text-[0.85rem] text-dark outline-none focus:border-olive"
       />
       <div className="flex items-center gap-4">
         <button

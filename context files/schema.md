@@ -1,5 +1,8 @@
 # sessions.guide — Database Schema
 
+> **SUPERSEDED 2026-09-17.** Stale as of migration 0013 — predates
+> 0013–0017 entirely. Use `docs/schema.md`. Do not read this file.
+
 Living source of truth. Update after every migration. Check this before writing any database query.
 
 ---

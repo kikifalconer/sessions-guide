@@ -128,9 +128,11 @@ Full marketing landing / About / pricing-as-marketing. Blocked on the A5 marketi
 AI search v2 copy (conversational UI). Tied to a future phase.
 
 ### Terminology sweep (do before any other copy task)
-- [ ] **A6. Sage → Guide rename sweep.** All display copy, page routes'
-  visible text, email templates. Code untouched. Includes Guide program copy
-  when that phase opens.
+- [x] **A6. Sage → Guide rename sweep. CANCELLED, August 2026.** Withdrawn rather
+  than done: the platform is now Guides' Space, so "Guide" as a role noun would
+  collide with the company name. The curator role stays **Sage**, which is what
+  the code already said, so the sweep had nothing to change. See brand-voice.md,
+  "Reverted, August 2026".
 - [ ] **A7. Role-neutral chrome audit.** Nav, /help, section headers: replace
   audience labels with task language per brand-voice.md.
 

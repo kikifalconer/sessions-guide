@@ -234,7 +234,7 @@ Sorted by reach. This is the "what am I about to break" table.
 | `src/app/globals.css` | **30 (all)** | Everything. Token layer + type scale + `.btn-*` + `.caption`/`.label` |
 | `src/app/layout.tsx` | **30 (all)** | Typekit link, footer injection, default `metadata` |
 | `src/components/site-footer.tsx` | **30 (all)** | `layout.tsx` |
-| `src/components/site-header.tsx` | **22** | `contact`, `privacy`, `join-sessions`, `in/[city]`, `terms`, `mission`, `explore`, `explore/[category]`, `search`, `dashboard` (+`DashboardShell`, `admin/pages` ×3, `billing`), `guides/[slug]`, `account`, `pricing`, `[slug]`, `[slug]/reviews`, `sages/[slug]`, `help`, `help/FaqPage` (→ `/help/practitioners`, `/help/seekers`) |
+| `src/components/site-header.tsx` | **22** | `contact`, `privacy`, `join-sessions`, `in/[city]`, `terms`, `mission`, `explore`, `explore/[category]`, `search`, `dashboard` (+`admin/pages` ×3, `billing`), `guides/[slug]`, `account`, `pricing`, `[slug]`, `[slug]/reviews`, `sages/[slug]`, `help`, `help/FaqPage` (→ `/help/practitioners`, `/help/seekers`) |
 | `src/components/header-nav.tsx` | 22 (transitively) | `site-header.tsx` only |
 | `src/components/PractitionerCard.tsx` | 4 | `explore/[category]`, `in/[city]`, `search`, `sages/[slug]` |
 | `src/lib/routes.ts` | 3 | `explore`, `search`, `in/[city]` |

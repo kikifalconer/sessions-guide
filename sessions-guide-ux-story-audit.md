@@ -251,7 +251,7 @@ Full copy for every section is in `sessions-guide-landing-copy-deck.md`.
 ### Next
 12. Reorganize the footer by intent: Find a session / List your practice / About / Legal. Per `decisions.md`, do not wire any of these to a route that does not resolve yet.
 13. Add a real second-best action. A short downloadable handbook for practitioners is the obvious candidate and you have the material already. Do not call it a "guide."
-14. Rework the `/help` placeholder copy and apply the role-neutral chrome rule (your A7; A6 is the separate Sage to Guide rename sweep).
+14. Rework the `/help` placeholder copy and apply the role-neutral chrome rule (your A7; A6, the Sage to Guide rename sweep, was cancelled in August 2026 — the curator role stays Sage).
 15. Write the Guides program page. It is your best available proof asset and it currently does not exist.
 
 ---

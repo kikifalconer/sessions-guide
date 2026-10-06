@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import SiteHeader from '@/components/site-header'
+import AppOrPublicShell from '@/components/dashboard/AppOrPublicShell'
 import ProfileHero from './ProfileHero'
 import InfoStrip, { type ProfileLink } from './InfoStrip'
 import AboutSection from './AboutSection'
@@ -96,10 +97,10 @@ export async function generateMetadata({
   const profile = await fetchProfile(slug)
   // Never leak an unpublished practitioner's name/tagline via metadata: the page
   // body 404s for non-owners, so the <head> must not identify them either (H2).
-  if (!profile || !profile.is_published) return { title: 'sessions.guide' }
+  if (!profile || !profile.is_published) return { title: 'guides’space' }
   if (isFixture(slug)) {
     return {
-      title: 'sessions.guide',
+      title: 'guides’space',
       robots: { index: false, follow: false },
     }
   }
@@ -110,8 +111,8 @@ export async function generateMetadata({
     profile.tagline ?? (profile.bio ? `${profile.bio.slice(0, 155).trimEnd()}` : undefined)
   return {
     title: primaryModality
-  ? `${profile.full_name}, ${primaryModality} | sessions.guide`
-      : `${profile.full_name} | sessions.guide`,
+  ? `${profile.full_name}, ${primaryModality} | guides’space`
+      : `${profile.full_name} | guides’space`,
     description,
   }
 }
@@ -132,6 +133,31 @@ export default async function PractitionerProfilePage({
 
   const isOwner = user?.id === profile.id
   if (!profile.is_published && !isOwner) notFound()
+
+  // The heart renders for every visitor except the owner (a guide can't
+  // favorite their own profile) -- including signed-out visitors, whose
+  // click routes through /login and resumes the save on return (D20: never
+  // a browse wall). initialSaved only has a real value to look up once a
+  // user is signed in.
+  let initialSaved = false
+  if (user && !isOwner) {
+    const admin = createAdminClient()
+    const { data: favoriteRow } = await admin
+      .from('favorites')
+      .select('seeker_id')
+      .eq('seeker_id', user.id)
+      .eq('practitioner_id', profile.id)
+      .maybeSingle()
+    initialSaved = Boolean(favoriteRow)
+  }
+  const favorite = isOwner
+    ? null
+    : {
+        practitionerId: profile.id,
+        initialSaved,
+        isSignedIn: Boolean(user),
+        profilePath: `/${profile.slug}`,
+      }
 
   const sortedModalities = [...profile.practitioner_modalities].sort(
     (a, b) => Number(b.is_primary) - Number(a.is_primary)
@@ -230,6 +256,7 @@ export default async function PractitionerProfilePage({
   })
 
   return (
+    <AppOrPublicShell signedOutHeader={<SiteHeader centerLabel={profile.full_name} />}>
     <main className="min-h-screen bg-bg">
      {profile.is_published && !isFixture(slug) && <JsonLd data={practitionerSeo} />}
       {!profile.is_published && isOwner && (
@@ -240,12 +267,11 @@ export default async function PractitionerProfilePage({
         </div>
       )}
 
-      <SiteHeader centerLabel={profile.full_name} />
-
       <ProfileHero
         name={profile.full_name}
         tagline={profile.tagline}
         bannerUrl={profile.banner_url}
+        favorite={favorite}
       />
 
       <InfoStrip
@@ -271,5 +297,6 @@ export default async function PractitionerProfilePage({
         disclaimer={hasPsychedelicFacilitation ? PSYCHEDELIC_DISCLAIMER : null}
       />
     </main>
+    </AppOrPublicShell>
   )
 }
