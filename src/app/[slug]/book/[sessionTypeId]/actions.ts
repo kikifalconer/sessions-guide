@@ -30,7 +30,7 @@ import {
   safeCancelUrl,
   upsertClientRow,
   whenLabel,
-  type BookingResult,
+  type BookingResult as CoreBookingResult,
 } from '@/lib/bookingFinalize'
 import { Interval } from 'luxon'
 
@@ -59,7 +59,9 @@ export type BookingInput = {
   requestedAmount: number | null // sliding_scale / donation, dollars
 }
 
-export type { BookingResult }
+// Type alias (not a re-export): 'use server' modules may only re-export
+// async functions, and Turbopack rejects `export type { ... }` here.
+export type BookingResult = CoreBookingResult
 
 export type HoldResult =
   | { ok: true; bookingId: string; clientSecret: string; stripeAccountId: string }
