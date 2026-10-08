@@ -27,28 +27,11 @@ import ScrubScale from '@/components/motion/ScrubScale'
 const META_DESCRIPTION =
   'A booking platform for transformational and healing sessions: ceremonies, readings, treatments, healings, and journeys.'
 
-// COPY NEEDED: page title concept for /.
-//
-// Every other route sets a lowercase concept and buildMetadata appends the
-// brand ("{concept} | guides’space"). No approved string exists for this
-// one: per the landing copy deck, the page title cascades from the A1 hero
-// candidate, which is still undecided. Rather than invent brand copy, the
-// title is pinned to exactly what / emits today. Replace the override below
-// with a real `concept` once A1 lands.
-const INTERIM_TITLE = BRAND_NAME
-
-const base = buildMetadata({
-  concept: INTERIM_TITLE,
+export const metadata: Metadata = buildMetadata({
+  concept: 'book healing & transformational sessions',
   description: META_DESCRIPTION,
   path: '/',
 })
-
-export const metadata: Metadata = {
-  ...base,
-  title: INTERIM_TITLE,
-  openGraph: { ...base.openGraph, title: INTERIM_TITLE },
-  twitter: { ...base.twitter, title: INTERIM_TITLE },
-}
 
 export default function LandingPage() {
   return (
