@@ -42,7 +42,7 @@ export async function publishProfile(): Promise<ActionResult> {
   if (!hasName || !hasRealSlug || !hasPrimaryModality) {
     return {
       ok: false,
-      error: 'Finish your profile first — add your name and at least one modality before publishing.',
+      error: 'Finish your profile first. Add your name and at least one modality before publishing.',
     }
   }
 
@@ -65,15 +65,15 @@ export async function cancelGuideBooking(bookingId: string): Promise<{ ok: boole
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not authenticated' }
 
-  const { data: practitioner } = await supabase
+  // RLS is service-role only (0010). practitioners.id is the auth user id.
+  const admin = createAdminClient()
+  const { data: practitioner } = await admin
     .from('practitioners')
     .select('id')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .maybeSingle()
 
   if (!practitioner) return { ok: false, error: 'No practitioner profile' }
-
-  const admin = createAdminClient()
   const { data: booking } = await admin
     .from('bookings')
     .select('id, practitioner_id')

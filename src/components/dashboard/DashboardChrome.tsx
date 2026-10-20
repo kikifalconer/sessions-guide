@@ -8,6 +8,7 @@ import {
   isDashboardNavActive,
   type DashboardNavItem,
 } from '@/lib/dashboardNav'
+import SignOutButton from '@/components/dashboard/SignOutButton'
 
 function navLinkClass(active: boolean): string {
   return [
@@ -82,11 +83,12 @@ export default function DashboardChrome({
           })}
         </nav>
 
-        <div className="hidden shrink-0 px-6 py-6 md:block">
+        <div className="shrink-0 px-6 py-4 md:py-6">
           <p className="font-body text-[1.14rem] font-light leading-[1.65] text-cream">
             {fullName || 'Your profile'}
           </p>
           {statusLabel && <p className="caption mt-1 text-citron">{statusLabel}</p>}
+          <SignOutButton />
         </div>
       </aside>
 

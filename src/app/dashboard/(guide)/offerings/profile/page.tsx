@@ -5,6 +5,7 @@ import ProfileSection from '../../ProfileSection'
 import DisplayNameEditor from '../../DisplayNameEditor'
 import ModalitiesEditor from '../../ModalitiesEditor'
 import BioEditor from '../../BioEditor'
+import LinksEditor from '../../LinksEditor'
 import PageHeader from '@/components/dashboard/PageHeader'
 import PracticeNav from '@/components/dashboard/PracticeNav'
 
@@ -17,7 +18,7 @@ export default async function DashboardPracticeProfilePage() {
   const [{ data: profileRow }, { data: tagRows }, { data: modalityRows }] = await Promise.all([
     admin
       .from('practitioners')
-      .select('tagline, bio')
+      .select('tagline, bio, link_1, link_2, link_3')
       .eq('id', practitioner.id)
       .maybeSingle(),
     admin.from('practitioner_modalities').select('modality_id, is_primary').eq('practitioner_id', practitioner.id),
@@ -76,6 +77,22 @@ export default async function DashboardPracticeProfilePage() {
           <h2>Bio</h2>
           <div className="mt-6">
             <BioEditor initialBio={(profileRow?.bio as string | null) ?? null} />
+          </div>
+        </section>
+
+        <section className="mt-12">
+          <h2>Links</h2>
+          <p className="mt-3 max-w-[60ch] text-dark">
+            Up to three links on your public profile. A website, Instagram, YouTube, or anywhere else your work lives.
+          </p>
+          <div className="mt-6 max-w-xl">
+            <LinksEditor
+              initialLinks={[
+                (profileRow?.link_1 as string | null) ?? '',
+                (profileRow?.link_2 as string | null) ?? '',
+                (profileRow?.link_3 as string | null) ?? '',
+              ]}
+            />
           </div>
         </section>
       </div>

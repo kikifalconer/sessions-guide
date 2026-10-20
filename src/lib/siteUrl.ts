@@ -35,6 +35,39 @@ export function validateSiteUrl(
   return value
 }
 
+function isPublicOrigin(value: string): boolean {
+  if (!value) return false
+  try {
+    const parsed = new URL(value)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+    return parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1'
+  } catch {
+    return false
+  }
+}
+
+// Called from next.config during `next build`. Production (and any build that
+// is not a Vercel preview) still requires NEXT_PUBLIC_SITE_URL. Vercel preview
+// deployments often do not receive Production-scoped env vars, so when the
+// explicit origin is missing or localhost they use this deployment's
+// VERCEL_URL. That keeps cancel and review links on the preview that sent them.
+export function assertBuildSiteUrl(): void {
+  const explicit = (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim()
+
+  if (process.env.VERCEL_ENV === 'preview' && !isPublicOrigin(explicit)) {
+    const host = (process.env.VERCEL_URL ?? '')
+      .trim()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/$/, '')
+    if (host && isPublicOrigin(`https://${host}`)) {
+      process.env.NEXT_PUBLIC_SITE_URL = `https://${host}`
+      return
+    }
+  }
+
+  validateSiteUrl(process.env.NEXT_PUBLIC_SITE_URL, true)
+}
+
 // Resolved, validated origin with no trailing slash. Throws in production if
 // misconfigured (backstop to the build-time gate).
 export function getSiteUrl(): string {
