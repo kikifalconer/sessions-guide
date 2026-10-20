@@ -25,6 +25,7 @@ Status legend: 🔴 hard launch gate · 🟠 open decision (Kiki's call, blockin
 |---|---|---|
 | OD-1 (H6) | Redirect/delayed payment methods break checkout | PI uses `automatic_payment_methods` but no `return_url`; redirect methods error, delayed methods can charge after hold cancellation. (a) card-only for launch (small fix) vs (b) `return_url` + webhook settlement (C2 webhook infra now exists, cheaper than before). |
 | OD-2 (M2) | Offsite `pending_payment` bookings never expire | Intentional per decisions.md (durable direct-payment bookings). Confirm durable-forever, or set an expiry policy. Log outcome either way. |
+RESOLVED 2026-10-07 (Kiki): Offsite pending_payment bookings are durable by design — no auto-expiry. The platform cannot observe off-platform payment; the guide cancels manually if needed. Matches current expireStaleHolds behaviour (A3 audit, docs/audit-findings.md). Approval holds still expire at 7 days (M2/F-18).
 | OD-3 | Rate-limiting mechanism | Per-IP/session limiter and where it lives: middleware, Upstash, Vercel firewall. Then RL-1 becomes one implementation task. |
 | OD-4 | Deferred tier entitlements | Profile banner gating by tier + co-branded page entitlements excluded from the D24 model until designed. Blocks nothing backend-side; park until Phase D. |
 

@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import { DateTime } from 'luxon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { reconcileRefundFromEvent } from '@/lib/cancellation'
-import { finalizeBooking } from '@/app/[slug]/book/[sessionTypeId]/actions'
+import { finalizeBookingCore } from '@/lib/bookingFinalize'
 import { priceIdToTier, highestTier, ACTIVE_SUBSCRIPTION_STATUSES } from '@/lib/tiers'
 
 // Stripe webhook. Foundational for Phase 4 — first consumer of
@@ -107,10 +107,11 @@ async function handlePaymentSucceeded(
     return
   }
 
-  // pending_payment (or confirmed re-entry): finalize idempotently. finalizeBooking
+  // pending_payment (or confirmed re-entry): finalize idempotently. The core
   // re-verifies the charge with Stripe and only the atomic transition winner
-  // sends emails / creates the calendar event.
-  await finalizeBooking(booking.id)
+  // sends emails / creates the calendar event. Unauthenticated on purpose (F-19):
+  // ownership is the webhook signature, not a seeker session.
+  await finalizeBookingCore(booking.id)
 }
 
 // --- Subscription events (D24) -------------------------------------------
