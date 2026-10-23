@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { accountIdentity } from '@/lib/seekerIdentity'
+import { countUnreadInquiries } from '@/lib/inquiries'
 import SiteHeader from '@/components/site-header'
 import DashboardChrome from '@/components/dashboard/DashboardChrome'
 import { BASIC_NAV, MEMBER_NAV } from '@/lib/dashboardNav'
@@ -34,12 +35,14 @@ export default async function AppOrPublicShell({
     .maybeSingle()
 
   if (practitioner) {
+    const unreadMessages = await countUnreadInquiries(user.id)
     return (
       <DashboardChrome
         items={MEMBER_NAV}
         mobileTabs={MEMBER_NAV}
         fullName={practitioner.full_name as string}
         statusLabel={practitioner.is_published ? 'Live' : 'Draft'}
+        badges={{ '/dashboard/bookings': unreadMessages }}
       >
         {children}
       </DashboardChrome>

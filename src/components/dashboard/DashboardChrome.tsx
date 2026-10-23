@@ -18,18 +18,33 @@ function navLinkClass(active: boolean): string {
   ].join(' ')
 }
 
+function badgeCount(badges: Readonly<Record<string, number>> | undefined, href: string): number {
+  const count = badges?.[href] ?? 0
+  return count > 0 ? count : 0
+}
+
+function BadgeCount({ count }: { count: number }) {
+  return (
+    <span className="inline-flex min-h-5 min-w-5 items-center justify-center bg-citron px-1 text-[0.6875rem] leading-none tracking-normal text-dark normal-case">
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
 export default function DashboardChrome({
   children,
   items,
   mobileTabs,
   fullName,
   statusLabel,
+  badges,
 }: {
   children: React.ReactNode
   items: readonly DashboardNavItem[]
   mobileTabs: readonly DashboardNavItem[]
   fullName: string
   statusLabel?: string
+  badges?: Readonly<Record<string, number>>
 }) {
   const pathname = usePathname()
 
@@ -69,14 +84,21 @@ export default function DashboardChrome({
         <nav aria-label="Dashboard" className="hidden flex-1 md:flex md:flex-col md:gap-4">
           {items.map((item) => {
             const isActive = isDashboardNavActive(pathname, item)
+            const unread = badgeCount(badges, item.href)
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
+                aria-label={unread > 0 ? `${item.label}, ${unread} unread` : undefined}
                 className={navLinkClass(isActive)}
               >
                 {item.label}
+                {unread > 0 && (
+                  <span className="ml-3">
+                    <BadgeCount count={unread} />
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -105,24 +127,32 @@ export default function DashboardChrome({
       >
         {mobileTabs.map((item) => {
           const isActive = isDashboardNavActive(pathname, item)
+          const unread = badgeCount(badges, item.href)
           return (
             <Link
               key={item.href}
               href={item.href}
-              aria-label={item.label}
+              aria-label={unread > 0 ? `${item.label}, ${unread} unread` : item.label}
               aria-current={isActive ? 'page' : undefined}
               className={`flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 px-0.5 py-1.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cream ${
                 isActive ? 'text-citron' : 'text-cream/80'
               }`}
             >
-              <Image
-                src={item.icon}
-                alt=""
-                width={32}
-                height={23}
-                aria-hidden="true"
-                className="brightness-0 invert"
-              />
+              <span className="relative">
+                <Image
+                  src={item.icon}
+                  alt=""
+                  width={32}
+                  height={23}
+                  aria-hidden="true"
+                  className="brightness-0 invert"
+                />
+                {unread > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5">
+                    <BadgeCount count={unread} />
+                  </span>
+                )}
+              </span>
               <span className="caption whitespace-nowrap !text-[0.5625rem] leading-none">
                 {item.shortLabel ?? item.label}
               </span>
