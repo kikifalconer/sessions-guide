@@ -29,7 +29,7 @@ function normalizeUrl(value: string): string | null {
 // Step 1. Creates the auth user, then the practitioners row keyed by the
 // auth user id. full_name and slug are NOT NULL in the schema, so the row
 // starts with an empty name and the user id as a placeholder slug. Step 2
-// replaces both. subscription_tier starts null and is set to 'basic' at
+// replaces both. subscription_tier starts null and is set to 'free' at
 // step 6, which doubles as the onboarding completion marker.
 export async function signUpWithEmail(
   email: string,
@@ -251,7 +251,7 @@ export async function completeOnboarding(
       link_1: normalizeUrl(link1),
       link_2: normalizeUrl(link2),
       link_3: normalizeUrl(link3),
-      subscription_tier: 'basic',
+      subscription_tier: 'free',
       updated_at: new Date().toISOString(),
     })
     .eq('id', user.id)
