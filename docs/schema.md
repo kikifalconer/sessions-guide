@@ -127,11 +127,14 @@ confirmation_mode   text check (confirmation_mode in ('instant', 'pending_paymen
 photo_url           text  -- Cloudinary URL
 is_active           boolean not null default true
 sort_order          int not null default 0
+max_capacity        int null  -- added in 0018; null = 1:1. Group types are >= 2. No tier check in the database.
 created_at          timestamptz not null default now()
 updated_at          timestamptz not null default now()
 ```
 
 **Note:** Category is always inferred via `modalities.category_id` — never stored directly on session_types.
+
+**Group types (0018):** `max_capacity is null` is a 1:1 session type. `max_capacity >= 2` is a group type. Who may set it is application code (`practitioners.subscription_tier = 'alchemist'`), not a constraint. `duration_minutes` stays NOT NULL and is not the length of a group occurrence.
 
 **Coherence warning (TD5):** no DB CHECK ties price/price_min/price_max or confirmation_mode to pricing_model. Every write MUST route through `validateSessionTypeInput` (`src/lib/sessionType.ts`).
 
@@ -164,12 +167,37 @@ constraint location_required_for_in_person check (
 
 ---
 
+## session_occurrences
+```sql
+-- added in 0018. One dated group event. Location is NOT stored here; it stays
+-- on availability_blocks (Path A). RLS enabled with NO policies (0010).
+id                    uuid primary key default gen_random_uuid()
+practitioner_id       uuid not null references practitioners(id) on delete cascade
+session_type_id       uuid not null references session_types(id)
+availability_block_id uuid not null references availability_blocks(id)
+format                text not null check (format in ('virtual', 'in_person'))  -- concrete; a 'both' block may host either
+start_datetime        timestamptz not null
+end_datetime          timestamptz not null  -- check end_datetime > start_datetime. Authoritative span; not derived from duration_minutes.
+capacity              int not null check (capacity >= 2)
+status                text not null default 'scheduled' check (status in ('scheduled', 'cancelling', 'cancelled'))
+google_event_id       text  -- one outbound Google event for the occurrence, not per seat
+created_at            timestamptz not null default now()
+updated_at            timestamptz not null default now()
+```
+
+**Overlap (0018):** exclusion constraint `no_overlapping_occurrences` — no two `scheduled` or `cancelling` occurrences for the same practitioner may overlap (`tstzrange` `&&`). `cancelled` rows do not hold the window. `cancelling` accepts no new seats; it becomes `cancelled` only once every seat is cancelled (application). A seat whose refund fails stays booked and is reported to the Guide for retry.
+
+**Cross-table guard (0018):** `bookings_reject_occurrence_overlap` and `session_occurrences_reject_booking_overlap` reject any overlap between a 1:1 booking (`occurrence_id` null, status not `cancelled`) and a `scheduled` or `cancelling` occurrence. Both take `pg_advisory_xact_lock(hashtext(practitioner_id::text))` before reading the other table. The error message is `occurrence_overlap`.
+
+---
+
 ## bookings
 ```sql
 id                    uuid primary key default gen_random_uuid()
 practitioner_id       uuid not null references practitioners(id)
 availability_block_id uuid not null references availability_blocks(id)
 session_type_id       uuid not null references session_types(id)
+occurrence_id         uuid null references session_occurrences(id)  -- added in 0018; null = 1:1. Set = one seat. Seat start/end copy the occurrence span, not start + duration_minutes.
 seeker_id             uuid null references auth.users(id)  -- null only on historical guest rows (D20)
 guest_name            text  -- historical guest rows only
 guest_email           text  -- historical guest rows only
@@ -197,13 +225,17 @@ created_at            timestamptz not null default now()
 updated_at            timestamptz not null default now()
 ```
 
-**Double-booking prevention (added in 0003):** btree_gist exclusion constraint — no two non-cancelled bookings for the same practitioner may overlap:
+**Double-booking prevention (added in 0003, narrowed in 0018):** btree_gist exclusion constraint `no_overlapping_bookings` — no two non-cancelled **1:1** bookings (`occurrence_id is null`) for the same practitioner may overlap:
 ```sql
 alter table bookings add constraint no_overlapping_bookings
   exclude using gist (practitioner_id with =, tstzrange(start_datetime, end_datetime) with &&)
-  where (status <> 'cancelled');
+  where (status <> 'cancelled' and occurrence_id is null);
 ```
-A non-cancelled `pending_payment` row IS the slot hold during checkout. Abandoned on-platform holds (`payment_status = 'unpaid'`, older than 30 min) are lazily cancelled during slot generation. Offsite `pending_payment` rows (`payment_status = 'offsite'`) are durable and never auto-expired (open decision OD-2).
+A non-cancelled `pending_payment` row IS the slot hold during checkout. Abandoned on-platform holds (`payment_status = 'unpaid'`, older than 30 min) are lazily cancelled during slot generation. Offsite `pending_payment` rows (`payment_status = 'offsite'`) are durable and never auto-expired (OD-2). That durability applies to group seats too: an offsite `pending_payment` seat holds capacity until the Guide cancels it. `book_group_seat` also cancels stale on-platform holds on that occurrence inside its locked transaction, before the started, already-booked, and capacity checks (`status = 'cancelled'`, `cancellation_reason = 'payment_abandoned'`). `full`, `already_booked`, and `started` are returned rows, so that cancel commits when the seat is not granted. `not_found` and a bad booking field still raise and roll the statement back. Callers must not roll back on the three returned denials. The function does not cancel the Stripe PaymentIntent.
+
+**One seat per client (0018):** partial unique index `one_seat_per_seeker_per_occurrence` on `(occurrence_id, seeker_id)` where `status <> 'cancelled'` and both ids are not null.
+
+**Group seat insert (0018):** `book_group_seat(occurrence_id, seeker_id, confirmation_mode, status, payment_status, notes)` returns `table(booking_id uuid, error text)`. One row: `booking_id` set and `error` null on success. `error` is `started` (`start_datetime <= now()`), `already_booked`, or `full` when the seat is not granted, with `booking_id` null. It locks the occurrence `for update`. It raises `not_found` (missing, null seeker, or status other than `scheduled`). A value the bookings checks reject still raises. Inside that lock, before the three denial returns, it sets `status = 'cancelled'` and `cancellation_reason = 'payment_abandoned'` on this occurrence's stale holds: `pending_payment` and `payment_status = 'unpaid'` and `created_at` older than 30 minutes. Offsite rows are never included. Because those denials return, the cancel commits with the call. Capacity is then the count of remaining non-cancelled seats, so a fresh unpaid hold and an offsite `pending_payment` both count. The function does not cancel the Stripe PaymentIntent. It copies `session_occurrences.format` onto `booked_format`, and copies block location only when that format is `in_person`. Execute is granted to `service_role` only. A group seat does not get its own `bookings.google_event_id`; the occurrence row holds the one outbound event.
 
 ---
 

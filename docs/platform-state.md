@@ -43,6 +43,11 @@ Phase 0 verdict (2026-07-26): all 13 files live in `supabase/migrations/` — **
 | 0011 | seekers | **VERIFIED applied** — `seekers` table live with expected columns (0 rows) |
 | 0012 | three_tier_billing | tier rename, `sage_codes`, `trial_end` + reminder stamps |
 | 0013 | pages_system | `pages`, `page_blocks` |
+| 0014 | one_active_subscription_per_practitioner | Partial unique index: one entitlement-granting subscription per practitioner (F-23). In repo; not part of the 2026-07-26 live verdict. |
+| 0015 | journeys_integration_modality | `Integration` modality under Journeys. In repo; not part of the 2026-07-26 live verdict. |
+| 0016 | offsite_paid_at | `bookings.offsite_paid_at`. In repo; not part of the 2026-07-26 live verdict. |
+| 0017 | favorites | Seeker favorites of a practitioner (D29). In repo; not part of the 2026-07-26 live verdict. |
+| 0018 | group_sessions | `session_types.max_capacity`, `session_occurrences`, `bookings.occurrence_id`, rebuilt `no_overlapping_bookings`, `book_group_seat` (returns `booking_id`/`error`; cancels stale unpaid holds before `started`/`already_booked`/`full`, and those three return a row so the cancel commits). Written for manual apply; not applied. |
 
 ---
 
