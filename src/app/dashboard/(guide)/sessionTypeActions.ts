@@ -3,7 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { validateSessionTypeInput, type SessionTypeInput } from '@/lib/sessionType'
+import {
+  validateSessionTypeInput,
+  type SessionTypeGate,
+  type SessionTypeInput,
+} from '@/lib/sessionType'
 
 // NOTE: a 'use server' module may export ONLY async functions. Do NOT re-export
 // types from here (e.g. `export type { SessionTypeInput }`) — the server-action
@@ -55,6 +59,26 @@ async function ownsSessionType(
   return Boolean(data)
 }
 
+// Tier and confirmation default come from the practitioners row only.
+// subscriptions is intentionally not read (D24).
+async function loadSessionTypeGate(
+  admin: Admin,
+  userId: string,
+  existingMaxCapacity: number | null
+): Promise<SessionTypeGate | null> {
+  const { data } = await admin
+    .from('practitioners')
+    .select('subscription_tier, confirmation_mode')
+    .eq('id', userId)
+    .maybeSingle()
+  if (!data) return null
+  return {
+    tier: (data.subscription_tier as string | null) ?? null,
+    existingMaxCapacity,
+    practitionerConfirmationMode: (data.confirmation_mode as string | null) ?? null,
+  }
+}
+
 async function revalidateProfile(admin: Admin, userId: string) {
   const { data } = await admin
     .from('practitioners')
@@ -68,17 +92,12 @@ export async function createSessionType(input: SessionTypeInput): Promise<Action
   const user = await getSessionUser()
   if (!user) return { ok: false, error: 'Sign in to continue.' }
 
-  const result = validateSessionTypeInput(input)
-  if ('error' in result) return { ok: false, error: result.error }
-
   const admin = createAdminClient()
+  const gate = await loadSessionTypeGate(admin, user.id, null)
+  if (!gate) return { ok: false, error: GENERIC_ERROR }
 
-  const { data: practitioner } = await admin
-    .from('practitioners')
-    .select('id')
-    .eq('id', user.id)
-    .maybeSingle()
-  if (!practitioner) return { ok: false, error: GENERIC_ERROR }
+  const result = validateSessionTypeInput(input, gate)
+  if ('error' in result) return { ok: false, error: result.error }
 
   if (!(await isApprovedModality(admin, result.row.modality_id))) {
     return { ok: false, error: 'That modality is not available. Choose from the list.' }
@@ -102,13 +121,20 @@ export async function updateSessionType(
   const user = await getSessionUser()
   if (!user) return { ok: false, error: 'Sign in to continue.' }
 
-  const result = validateSessionTypeInput(input)
-  if ('error' in result) return { ok: false, error: result.error }
-
   const admin = createAdminClient()
-  if (!(await ownsSessionType(admin, id, user.id))) {
-    return { ok: false, error: 'That session type could not be found.' }
-  }
+  const { data: existing } = await admin
+    .from('session_types')
+    .select('id, max_capacity')
+    .eq('id', id)
+    .eq('practitioner_id', user.id)
+    .maybeSingle()
+  if (!existing) return { ok: false, error: 'That session type could not be found.' }
+
+  const gate = await loadSessionTypeGate(admin, user.id, (existing.max_capacity as number | null) ?? null)
+  if (!gate) return { ok: false, error: GENERIC_ERROR }
+
+  const result = validateSessionTypeInput(input, gate)
+  if ('error' in result) return { ok: false, error: result.error }
 
   if (!(await isApprovedModality(admin, result.row.modality_id))) {
     return { ok: false, error: 'That modality is not available. Choose from the list.' }

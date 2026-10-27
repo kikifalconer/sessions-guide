@@ -47,7 +47,7 @@ Phase 0 verdict (2026-07-26): all 13 files live in `supabase/migrations/` — **
 | 0015 | journeys_integration_modality | `Integration` modality under Journeys. In repo; not part of the 2026-07-26 live verdict. |
 | 0016 | offsite_paid_at | `bookings.offsite_paid_at`. In repo; not part of the 2026-07-26 live verdict. |
 | 0017 | favorites | Seeker favorites of a practitioner (D29). In repo; not part of the 2026-07-26 live verdict. |
-| 0018 | group_sessions | `session_types.max_capacity`, `session_occurrences`, `bookings.occurrence_id`, rebuilt `no_overlapping_bookings`, `book_group_seat` (returns `booking_id`/`error`; cancels stale unpaid holds before `started`/`already_booked`/`full`, and those three return a row so the cancel commits). Written for manual apply; not applied. |
+| 0018 | group_sessions | `session_types.max_capacity`, `session_occurrences`, `bookings.occurrence_id`, rebuilt `no_overlapping_bookings`, `book_group_seat` (returns `booking_id`/`error`; cancels stale unpaid holds before `started`/`already_booked`/`full`, and those three return a row so the cancel commits). Applied 2026-10-26 in the Supabase SQL editor. |
 
 ---
 

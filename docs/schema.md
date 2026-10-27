@@ -134,7 +134,7 @@ updated_at          timestamptz not null default now()
 
 **Note:** Category is always inferred via `modalities.category_id` — never stored directly on session_types.
 
-**Group types (0018):** `max_capacity is null` is a 1:1 session type. `max_capacity >= 2` is a group type. Who may set it is application code (`practitioners.subscription_tier = 'alchemist'`), not a constraint. `duration_minutes` stays NOT NULL and is not the length of a group occurrence.
+**Group types (0018):** `max_capacity is null` is a 1:1 session type. `max_capacity >= 2` is a group type. Who may set it is application code (`practitioners.subscription_tier = 'alchemist'`), not a constraint and not a `subscriptions` row (D24). `validateSessionTypeInput` allows a new group capacity only for that tier. A type that already has a group capacity can still be edited after a downgrade. Group types reject `pricing_model = 'inquire'` and an effective confirmation mode of `pending_approval` (the session type override, or the Guide default when the override is null). `duration_minutes` stays NOT NULL and is not the length of a group occurrence.
 
 **Coherence warning (TD5):** no DB CHECK ties price/price_min/price_max or confirmation_mode to pricing_model. Every write MUST route through `validateSessionTypeInput` (`src/lib/sessionType.ts`).
 
@@ -188,6 +188,8 @@ updated_at            timestamptz not null default now()
 **Overlap (0018):** exclusion constraint `no_overlapping_occurrences` — no two `scheduled` or `cancelling` occurrences for the same practitioner may overlap (`tstzrange` `&&`). `cancelled` rows do not hold the window. `cancelling` accepts no new seats; it becomes `cancelled` only once every seat is cancelled (application). A seat whose refund fails stays booked and is reported to the Guide for retry.
 
 **Cross-table guard (0018):** `bookings_reject_occurrence_overlap` and `session_occurrences_reject_booking_overlap` reject any overlap between a 1:1 booking (`occurrence_id` null, status not `cancelled`) and a `scheduled` or `cancelling` occurrence. Both take `pg_advisory_xact_lock(hashtext(practitioner_id::text))` before reading the other table. The error message is `occurrence_overlap`.
+
+**Occurrence writes:** every insert or update goes through `validateGroupOccurrence` (`src/lib/groupOccurrence.ts`). New occurrences require `subscription_tier = 'alchemist'`; editing an existing one does not. A single-day occurrence must fall on a date the block covers and on its weekly rule, inside that day's `start_time`–`end_time`. A session that runs past midnight in the block timezone needs `start_date`, `end_date`, and no weekly rule, and those dates bound the occurrence; daily hours are ignored. `format` is `virtual` or `in_person` and must fit the session type and the block (`both` on the block allows either). `start_datetime` and `end_datetime` are supplied by the caller. The function does not derive the end from `duration_minutes`.
 
 ---
 

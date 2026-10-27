@@ -18,7 +18,7 @@ export default async function DashboardOfferingsPage() {
     admin
       .from('session_types')
       .select(
-        'id, name, description, duration_minutes, format, modality_id, pricing_model, price, price_min, price_max, payment_method, cancellation_policy, confirmation_mode, photo_url, is_active'
+        'id, name, description, duration_minutes, format, modality_id, pricing_model, price, price_min, price_max, payment_method, cancellation_policy, confirmation_mode, photo_url, is_active, max_capacity'
       )
       .eq('practitioner_id', practitioner.id)
       .order('sort_order', { ascending: true })
@@ -50,6 +50,7 @@ export default async function DashboardOfferingsPage() {
     confirmationMode: (s.confirmation_mode as string | null) ?? null,
     photoUrl: (s.photo_url as string | null) ?? null,
     isActive: s.is_active as boolean,
+    maxCapacity: (s.max_capacity as number | null) ?? null,
   }))
 
   const modalities = (modalityRows ?? []).map((m) => {

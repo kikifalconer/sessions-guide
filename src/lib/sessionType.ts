@@ -6,6 +6,13 @@
 // composition: the database has no CHECK tying the price columns or
 // confirmation_mode to pricing_model (audit STOP-2), so a missed case here is
 // bad data. Keep it in lockstep with SessionTypeForm's conditional logic.
+//
+// Group types (max_capacity >= 2) are gated on practitioners.subscription_tier
+// = 'alchemist' only. Never on a subscriptions row (D24). A downgraded Guide
+// may keep editing a type that is already a group type; setting a capacity on
+// a 1:1 type is new creation and stays blocked.
+
+import { resolveConfirmationMode, type ConfirmationMode } from '@/lib/booking'
 
 // Mirrors the DB CHECK enums on session_types (0001_initial_schema.sql).
 export const FORMATS = ['virtual', 'in_person', 'both'] as const
@@ -33,6 +40,16 @@ export type SessionTypeInput = {
   paymentMethod: string | null
   cancellationPolicy: string | null
   photoUrl: string | null
+  // null = 1:1. An integer >= 2 is a group type. 1 is not a valid capacity.
+  maxCapacity: number | null
+}
+
+// Loaded by the server action from practitioners. The tier column is the only
+// entitlement input. existingMaxCapacity is null on create.
+export type SessionTypeGate = {
+  tier: string | null
+  existingMaxCapacity: number | null
+  practitionerConfirmationMode: string | null
 }
 
 export type SessionTypeRow = {
@@ -49,6 +66,7 @@ export type SessionTypeRow = {
   payment_method: string | null
   cancellation_policy: string | null
   photo_url: string | null
+  max_capacity: number | null
 }
 
 function inSet<T extends string>(set: readonly T[], value: string): value is T {
@@ -59,8 +77,26 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
+function asConfirmationMode(value: string | null): ConfirmationMode | null {
+  if (value === 'instant' || value === 'pending_payment' || value === 'pending_approval') {
+    return value
+  }
+  return null
+}
+
+function normalizeMaxCapacity(
+  value: number | null
+): { maxCapacity: number | null } | { error: string } {
+  if (value === null) return { maxCapacity: null }
+  if (!Number.isInteger(value) || value < 2) {
+    return { error: 'Set a capacity of 2 or more, or leave it empty.' }
+  }
+  return { maxCapacity: value }
+}
+
 export function validateSessionTypeInput(
-  input: SessionTypeInput
+  input: SessionTypeInput,
+  gate: SessionTypeGate
 ): { row: SessionTypeRow } | { error: string } {
   const name = input.name?.trim()
   if (!name) return { error: 'Add a name for this session.' }
@@ -123,6 +159,47 @@ export function validateSessionTypeInput(
     return { error: 'That upload did not come back from Cloudinary. Try again.' }
   }
 
+  const capacity = normalizeMaxCapacity(input.maxCapacity)
+  if ('error' in capacity) return capacity
+  const maxCapacity = capacity.maxCapacity
+  const isGroup = maxCapacity !== null
+  const alreadyGroup =
+    gate.existingMaxCapacity !== null &&
+    Number.isInteger(gate.existingMaxCapacity) &&
+    gate.existingMaxCapacity >= 2
+  if (isGroup && !alreadyGroup && gate.tier !== 'alchemist') {
+    return { error: 'An Alchemist Guide can add a group session.' }
+  }
+  if (isGroup && input.pricingModel === 'inquire') {
+    return { error: 'Choose fixed, sliding scale, or donation pricing for a group session.' }
+  }
+  if (isGroup) {
+    // Same inherit order as resolveConfirmationMode. GAP-1: pending_approval
+    // never becomes confirmed, so a group type must not land there via an
+    // override or the Guide's default.
+    const effective = resolveConfirmationMode(
+      {
+        confirmation_mode: asConfirmationMode(confirmationMode),
+        payment_method: null,
+        cancellation_policy: null,
+        pricing_model: input.pricingModel,
+        price: null,
+        price_min: null,
+        price_max: null,
+      },
+      {
+        confirmation_mode: asConfirmationMode(gate.practitionerConfirmationMode),
+        payment_method: null,
+        cancellation_policy: null,
+        stripe_account_id: null,
+        offsite_payment_instructions: null,
+      }
+    )
+    if (effective === 'pending_approval') {
+      return { error: 'A group session confirms instantly or once paid.' }
+    }
+  }
+
   return {
     row: {
       name,
@@ -138,6 +215,7 @@ export function validateSessionTypeInput(
       payment_method: paymentMethod,
       cancellation_policy: cancellationPolicy,
       photo_url: photoUrl,
+      max_capacity: maxCapacity,
     },
   }
 }

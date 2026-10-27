@@ -33,6 +33,8 @@ export type SessionTypeRow = {
   confirmationMode: string | null
   photoUrl: string | null
   isActive: boolean
+  // Passed through so an edit does not clear a capacity this form does not edit.
+  maxCapacity: number | null
 }
 
 export type PractitionerDefaults = {
@@ -222,6 +224,7 @@ export default function SessionTypeForm({
       paymentMethod: toNull(paymentMethod),
       cancellationPolicy: toNull(cancellationPolicy),
       photoUrl,
+      maxCapacity: sessionType?.maxCapacity ?? null,
     }
     startTransition(async () => {
       const result = sessionType
