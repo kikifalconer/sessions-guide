@@ -92,6 +92,7 @@ export default function SessionTypeForm({
   modalities,
   taggedModalityIds,
   defaults,
+  tier,
   onDone,
   onCancel,
 }: {
@@ -99,6 +100,7 @@ export default function SessionTypeForm({
   modalities: ModalityOption[]
   taggedModalityIds: string[]
   defaults: PractitionerDefaults
+  tier: string
   onDone: () => void
   onCancel: () => void
 }) {
@@ -129,6 +131,17 @@ export default function SessionTypeForm({
     sessionType?.cancellationPolicy ?? ''
   )
   const [photoUrl, setPhotoUrl] = useState<string | null>(sessionType?.photoUrl ?? null)
+  const existingGroup =
+    sessionType?.maxCapacity != null &&
+    Number.isInteger(sessionType.maxCapacity) &&
+    sessionType.maxCapacity >= 2
+  const isAlchemist = tier === 'alchemist'
+  const showGroup = isAlchemist || existingGroup
+  const groupLocked = existingGroup && !isAlchemist
+  const [groupOn, setGroupOn] = useState(existingGroup)
+  const [maxSeats, setMaxSeats] = useState(
+    existingGroup && sessionType?.maxCapacity != null ? String(sessionType.maxCapacity) : '2'
+  )
 
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -210,6 +223,28 @@ export default function SessionTypeForm({
       setError('Choose a modality.')
       return
     }
+    let maxCapacity: number | null = null
+    if (showGroup && groupOn) {
+      const parsed = Number.parseInt(maxSeats, 10)
+      if (!Number.isInteger(parsed) || parsed < 2) {
+        setError('Set a seat count of 2 or more.')
+        return
+      }
+      if (groupLocked && sessionType?.maxCapacity != null && parsed > sessionType.maxCapacity) {
+        setError('You can lower the seat count, not raise it.')
+        return
+      }
+      maxCapacity = parsed
+      if (pricingModel === 'inquire') {
+        setError('Choose fixed, sliding scale, or donation pricing for a group session.')
+        return
+      }
+      const effectiveConfirmation = confirmationMode || defaults.confirmationMode
+      if (effectiveConfirmation === 'pending_approval') {
+        setError('A group session confirms instantly or once paid.')
+        return
+      }
+    }
     const input: SessionTypeInput = {
       name: name.trim(),
       description: description.trim() || null,
@@ -224,7 +259,7 @@ export default function SessionTypeForm({
       paymentMethod: toNull(paymentMethod),
       cancellationPolicy: toNull(cancellationPolicy),
       photoUrl,
-      maxCapacity: sessionType?.maxCapacity ?? null,
+      maxCapacity,
     }
     startTransition(async () => {
       const result = sessionType
@@ -307,6 +342,54 @@ export default function SessionTypeForm({
           </select>
         </div>
 
+        {showGroup && (
+          <div>
+            <label className="flex min-h-11 items-center gap-3">
+              <input
+                type="checkbox"
+                checked={groupOn}
+                disabled={groupLocked || pending}
+                onChange={(e) => {
+                  const on = e.target.checked
+                  setGroupOn(on)
+                  if (!on) return
+                  if (pricingModel === 'inquire') setPricingModel('fixed')
+                  if (confirmationMode === 'pending_approval') setConfirmationMode('instant')
+                }}
+                className="size-5 accent-olive"
+              />
+              <span className="text-dark">Group session</span>
+            </label>
+            {groupLocked && (
+              <p className="caption mt-2 text-dark opacity-70">
+                This stays a group session. You can lower the seat count.
+              </p>
+            )}
+            {groupOn && (
+              <div className="mt-4">
+                <label htmlFor="st_max_seats" className="label mb-2 block text-dark">
+                  Max seats
+                </label>
+                <input
+                  id="st_max_seats"
+                  type="number"
+                  min={2}
+                  max={groupLocked ? sessionType?.maxCapacity ?? undefined : undefined}
+                  step={1}
+                  value={maxSeats}
+                  onChange={(e) => setMaxSeats(e.target.value)}
+                  className={FIELD}
+                />
+              </div>
+            )}
+            {groupOn && (confirmationMode || defaults.confirmationMode) === 'pending_approval' && (
+              <p className="caption mt-2 text-olive">
+                A group session confirms instantly or once paid.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Modality — single select, searchable, tagged modalities first. */}
         <div>
           <p className="label mb-2 text-dark">MODALITY</p>
@@ -385,7 +468,9 @@ export default function SessionTypeForm({
             onChange={(e) => setPricingModel(e.target.value)}
             className={FIELD}
           >
-            {Object.entries(PRICING_LABEL).map(([value, label]) => (
+            {Object.entries(PRICING_LABEL)
+              .filter(([value]) => !(groupOn && value === 'inquire'))
+              .map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
@@ -469,7 +554,9 @@ export default function SessionTypeForm({
             {showPendingPayment && (
               <option value="pending_payment">{CONFIRMATION_LABEL.pending_payment}</option>
             )}
-            <option value="pending_approval">{CONFIRMATION_LABEL.pending_approval}</option>
+            {!groupOn && (
+              <option value="pending_approval">{CONFIRMATION_LABEL.pending_approval}</option>
+            )}
           </select>
         </div>
 

@@ -96,7 +96,7 @@ export function validateGroupOccurrence(
   }
 
   if (!formatFits(input.sessionType.format, input.block.format, input.format)) {
-    return { error: 'Choose virtual or in person, matching the session type and the block.' }
+    return { error: 'Choose virtual or in\u2011person, matching the session type and the block.' }
   }
 
   const zone = input.block.timezone

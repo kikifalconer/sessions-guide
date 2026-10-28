@@ -8,6 +8,8 @@ import SessionTypeForm, {
   type SessionTypeRow,
 } from './SessionTypeForm'
 import { setSessionTypeActive } from './sessionTypeActions'
+import GroupEvents from './GroupEvents'
+import type { GuideBlock, GuideEvent } from './groupEventTypes'
 
 const PRICING_SUMMARY: Record<string, string> = {
   donation: 'DONATION',
@@ -36,12 +38,18 @@ export default function SessionsManager({
   taggedModalityIds,
   defaults,
   modalityNameById,
+  tier,
+  blocks,
+  events,
 }: {
   sessionTypes: SessionTypeRow[]
   modalities: ModalityOption[]
   taggedModalityIds: string[]
   defaults: PractitionerDefaults
   modalityNameById: Record<string, string>
+  tier: string
+  blocks: GuideBlock[]
+  events: GuideEvent[]
 }) {
   const router = useRouter()
   const [view, setView] = useState<View>({ kind: 'list' })
@@ -74,6 +82,7 @@ export default function SessionsManager({
         modalities={modalities}
         taggedModalityIds={taggedModalityIds}
         defaults={defaults}
+        tier={tier}
         onDone={done}
         onCancel={() => setView({ kind: 'list' })}
       />
@@ -88,6 +97,7 @@ export default function SessionsManager({
         modalities={modalities}
         taggedModalityIds={taggedModalityIds}
         defaults={defaults}
+        tier={tier}
         onDone={done}
         onCancel={() => setView({ kind: 'list' })}
       />
@@ -100,15 +110,15 @@ export default function SessionsManager({
   const row = (s: SessionTypeRow) => (
     <article
       key={s.id}
-      className={`flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between ${
-        s.isActive ? '' : 'opacity-60'
-      }`}
+      className={`flex flex-col gap-3 py-4 ${s.isActive ? '' : 'opacity-60'}`}
     >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="font-display text-dark">{s.name}</p>
         <p className="caption mt-1 text-dark opacity-70">
           {[
             `${s.durationMinutes} MIN`,
+            s.maxCapacity != null && s.maxCapacity >= 2 ? 'GROUP' : '',
             FORMAT_SUMMARY[s.format],
             priceSummary(s).toUpperCase(),
             (modalityNameById[s.modalityId] ?? '').toUpperCase(),
@@ -172,16 +182,27 @@ export default function SessionsManager({
           </button>
         )}
       </div>
+      </div>
+      {s.maxCapacity != null && s.maxCapacity >= 2 && (
+        <GroupEvents
+          sessionTypeId={s.id}
+          sessionFormat={s.format}
+          maxCapacity={s.maxCapacity}
+          tier={tier}
+          blocks={blocks}
+          events={events.filter((event) => event.sessionTypeId === s.id)}
+        />
+      )}
     </article>
   )
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between">
-        <h3 className="font-display font-normal normal-case tracking-normal">Your offerings</h3>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="font-display font-normal normal-case tracking-normal text-olive">Your offerings</h3>
         <button
           type="button"
-          className="btn-primary"
+          className="btn-primary w-full sm:w-auto"
           onClick={() => setView({ kind: 'create' })}
         >
           Add offering
