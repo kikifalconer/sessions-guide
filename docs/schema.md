@@ -134,7 +134,7 @@ updated_at          timestamptz not null default now()
 
 **Note:** Category is always inferred via `modalities.category_id` — never stored directly on session_types.
 
-**Group types (0018):** `max_capacity is null` is a 1:1 session type. `max_capacity >= 2` is a group type. Who may set it is application code (`practitioners.subscription_tier = 'alchemist'`), not a constraint and not a `subscriptions` row (D24). `validateSessionTypeInput` allows a new group capacity only for that tier. A type that already has a group capacity can still be edited after a downgrade. Group types reject `pricing_model = 'inquire'` and an effective confirmation mode of `pending_approval` (the session type override, or the Guide default when the override is null). `duration_minutes` stays NOT NULL and is not the length of a group occurrence.
+**Group types (0018):** `max_capacity is null` is a 1:1 session type. `max_capacity >= 2` is a group type. Who may set it is application code (`practitioners.subscription_tier = 'alchemist'`), not a constraint and not a `subscriptions` row (D24). `validateSessionTypeInput` allows a new group capacity only for that tier. A Guide who is no longer Alchemist may lower that capacity, never below 2, and may not raise it or clear it. Group types reject `pricing_model = 'inquire'` and an effective confirmation mode of `pending_approval` (the session type override, or the Guide default when the override is null). `duration_minutes` stays NOT NULL and is not the length of a group occurrence.
 
 **Coherence warning (TD5):** no DB CHECK ties price/price_min/price_max or confirmation_mode to pricing_model. Every write MUST route through `validateSessionTypeInput` (`src/lib/sessionType.ts`).
 

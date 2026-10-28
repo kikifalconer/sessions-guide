@@ -19,6 +19,12 @@ export type ActionResult = { ok: boolean; error?: string }
 
 const GENERIC_ERROR = 'Something went wrong. Try again or contact support.'
 
+function asCapacity(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value)) return value
+  if (typeof value === 'string' && /^-?\d+$/.test(value)) return Number(value)
+  return null
+}
+
 type Admin = ReturnType<typeof createAdminClient>
 
 async function getSessionUser() {
@@ -130,7 +136,7 @@ export async function updateSessionType(
     .maybeSingle()
   if (!existing) return { ok: false, error: 'That session type could not be found.' }
 
-  const gate = await loadSessionTypeGate(admin, user.id, (existing.max_capacity as number | null) ?? null)
+  const gate = await loadSessionTypeGate(admin, user.id, asCapacity(existing.max_capacity))
   if (!gate) return { ok: false, error: GENERIC_ERROR }
 
   const result = validateSessionTypeInput(input, gate)

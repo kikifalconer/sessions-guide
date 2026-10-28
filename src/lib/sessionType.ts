@@ -9,8 +9,8 @@
 //
 // Group types (max_capacity >= 2) are gated on practitioners.subscription_tier
 // = 'alchemist' only. Never on a subscriptions row (D24). A downgraded Guide
-// may keep editing a type that is already a group type; setting a capacity on
-// a 1:1 type is new creation and stays blocked.
+// may lower an existing group capacity, never below 2, and may not raise it
+// or clear it. Setting a capacity on a 1:1 type is new creation and stays blocked.
 
 import { resolveConfirmationMode, type ConfirmationMode } from '@/lib/booking'
 
@@ -167,7 +167,14 @@ export function validateSessionTypeInput(
     gate.existingMaxCapacity !== null &&
     Number.isInteger(gate.existingMaxCapacity) &&
     gate.existingMaxCapacity >= 2
-  if (isGroup && !alreadyGroup && gate.tier !== 'alchemist') {
+  if (alreadyGroup && gate.tier !== 'alchemist') {
+    if (!isGroup) {
+      return { error: 'This stays a group session. You can lower the seat count.' }
+    }
+    if ((maxCapacity as number) > (gate.existingMaxCapacity as number)) {
+      return { error: 'You can lower the seat count, not raise it.' }
+    }
+  } else if (isGroup && !alreadyGroup && gate.tier !== 'alchemist') {
     return { error: 'An Alchemist Guide can add a group session.' }
   }
   if (isGroup && input.pricingModel === 'inquire') {
