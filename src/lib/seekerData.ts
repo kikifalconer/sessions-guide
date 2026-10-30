@@ -27,6 +27,8 @@ export type SeekerBookingView = {
   amountRefunded: number | null
   cancellationPolicyCopy: string
   notes: string | null
+  isGroup: boolean
+  timezone: string | null
 }
 
 export type SeekerReviewView = {
@@ -69,8 +71,9 @@ export async function loadSeekerData(userId: string): Promise<SeekerData> {
     admin
       .from('bookings')
       .select(
-        `id, status, start_datetime, end_datetime, booked_format,
+        `id, status, start_datetime, end_datetime, booked_format, occurrence_id,
          booked_location_display, payment_status, amount_paid, amount_refunded, notes,
+         availability_blocks ( timezone ),
          session_types ( name, cancellation_policy ),
          practitioners ( full_name, slug, cancellation_policy )`
       )
@@ -96,6 +99,7 @@ export async function loadSeekerData(userId: string): Promise<SeekerData> {
       slug: string
       cancellation_policy: string | null
     } | null
+    const block = row.availability_blocks as unknown as { timezone: string } | null
 
     const status = row.status as SeekerBookingView['status']
     const fullLocation = status === 'confirmed' || status === 'completed'
@@ -121,6 +125,8 @@ export async function loadSeekerData(userId: string): Promise<SeekerData> {
       amountRefunded: (row.amount_refunded as number | null) ?? null,
       cancellationPolicyCopy: CANCELLATION_POLICY_COPY[policy],
       notes: (row.notes as string | null) ?? null,
+      isGroup: Boolean(row.occurrence_id),
+      timezone: block?.timezone ?? null,
     }
     return view
   })

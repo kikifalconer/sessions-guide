@@ -4,6 +4,7 @@ import { DateTime } from 'luxon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { reconcileRefundFromEvent } from '@/lib/cancellation'
 import { finalizeBookingCore } from '@/lib/bookingFinalize'
+import { refundSucceededChargeOnCancelledBooking } from '@/lib/orphanCharge'
 import { priceIdToTier, highestTier, ACTIVE_SUBSCRIPTION_STATUSES } from '@/lib/tiers'
 
 // Stripe webhook. Foundational for Phase 4 — first consumer of
@@ -26,58 +27,6 @@ const REFUND_EVENTS = new Set([
 ])
 
 type AdminClient = ReturnType<typeof createAdminClient>
-
-// A charge succeeded for a booking that was already released (expired/abandoned
-// hold that we could not cancel in time). Refund it on the connected account
-// and log loudly. Idempotent on the booking's stripe_refund_id.
-async function reconcileOrphanCharge(
-  stripe: Stripe,
-  admin: AdminClient,
-  booking: { id: string; practitioner_id: string; stripe_refund_id: string | null },
-  pi: Stripe.PaymentIntent
-): Promise<void> {
-  if (booking.stripe_refund_id) return // already refunded
-
-  const { data: pr } = await admin
-    .from('practitioners')
-    .select('stripe_account_id')
-    .eq('id', booking.practitioner_id)
-    .maybeSingle()
-  const account = pr?.stripe_account_id
-  if (!account) {
-    console.error(
-      '[stripe-webhook] ORPHAN CHARGE on cancelled booking with no connected account to refund',
-      { bookingId: booking.id, paymentIntent: pi.id }
-    )
-    return
-  }
-
-  console.error(
-    '[stripe-webhook] LOUD: payment succeeded on an already-cancelled booking — refunding',
-    { bookingId: booking.id, paymentIntent: pi.id, amountReceived: pi.amount_received }
-  )
-  try {
-    const refund = await stripe.refunds.create(
-      {
-        payment_intent: pi.id,
-        amount: pi.amount_received,
-        metadata: { booking_id: booking.id },
-      },
-      { stripeAccount: account, idempotencyKey: `reconcile-orphan:${booking.id}` }
-    )
-    await admin
-      .from('bookings')
-      .update({
-        payment_status: 'refunded',
-        amount_refunded: (pi.amount_received ?? 0) / 100,
-        stripe_refund_id: refund.id,
-        updated_at: DateTime.utc().toISO(),
-      })
-      .eq('id', booking.id)
-  } catch (err) {
-    console.error('[stripe-webhook] orphan-charge refund failed', booking.id, pi.id, err)
-  }
-}
 
 async function handlePaymentSucceeded(
   stripe: Stripe,
@@ -103,7 +52,7 @@ async function handlePaymentSucceeded(
   }
 
   if (booking.status === 'cancelled') {
-    await reconcileOrphanCharge(stripe, admin, booking, pi)
+    await refundSucceededChargeOnCancelledBooking(stripe, booking, pi.id, pi.amount_received)
     return
   }
 

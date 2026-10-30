@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { cardCrop } from '@/lib/cloudinary'
+import type { PublicOccurrence } from '@/lib/groupBooking'
 
 export type SessionCard = {
   id: string
@@ -9,6 +10,8 @@ export type SessionCard = {
   durationMinutes: number
   photoUrl: string | null
   isInquire: boolean
+  // null for a 1:1 session. A group session lists dates with no seat counts.
+  occurrences: PublicOccurrence[] | null
 }
 
 export default function SessionsSection({
@@ -64,9 +67,26 @@ export default function SessionsSection({
               </div>
 
               <p className="caption mt-4 text-dark">{session.name}</p>
-              <p className="caption mt-1 text-dark opacity-70">
-                {session.durationMinutes} MINUTES
-              </p>
+              {session.occurrences === null && (
+                <p className="caption mt-1 text-dark opacity-70">
+                  {session.durationMinutes} MINUTES
+                </p>
+              )}
+              {session.occurrences && (
+                <ul className="mt-4 flex flex-col gap-3">
+                  {session.occurrences.length === 0 ? (
+                    <li>No upcoming dates.</li>
+                  ) : (
+                    session.occurrences.map((occurrence) => (
+                      <li key={occurrence.id}>
+                        <p>{occurrence.rangeLabel}</p>
+                        <p className="caption mt-1 text-dark opacity-70">{occurrence.formatLabel}</p>
+                        <p className="caption mt-1 text-dark">{occurrence.availability}</p>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
               {session.description && (
                 <p className="mt-3">{session.description}</p>
               )}

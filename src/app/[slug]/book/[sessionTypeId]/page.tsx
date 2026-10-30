@@ -20,8 +20,11 @@ import {
   type PractitionerBookingFields,
   type SessionTypeBookingFields,
 } from '@/lib/booking'
+import { isGroupCapacity } from '@/lib/groupBooking'
+import { loadBookableOccurrences } from '@/lib/publicOccurrences'
 import { expireStaleHolds } from './actions'
 import BookingFlow from './BookingFlow'
+import GroupBookingFlow from './GroupBookingFlow'
 
 const PSYCHEDELIC_DISCLAIMER =
   'Psychedelic journey facilitation may be subject to local laws and regulations. Practitioners and clients are solely responsible for ensuring compliance with the laws of their jurisdiction.'
@@ -55,7 +58,7 @@ export default async function BookSessionPage({
   params: Promise<{ slug: string; sessionTypeId: string }>
   // slot/format persist the seeker's selection through the magic-link
   // round-trip (Amendment 4). Treated as hints and validated below.
-  searchParams: Promise<{ slot?: string; format?: string }>
+  searchParams: Promise<{ slot?: string; format?: string; occurrence?: string }>
 }) {
   const { slug, sessionTypeId } = await params
   const sp = await searchParams
@@ -85,6 +88,63 @@ export default async function BookSessionPage({
   if (!sessionType || sessionType.pricing_model === 'inquire') notFound()
 
   await expireStaleHolds(practitioner.id)
+
+  const p = practitioner as unknown as PractitionerBookingFields
+  const st = sessionType as unknown as SessionTypeBookingFields
+  const connectReady = await isConnectReady(practitioner.stripe_account_id)
+  const chargingNow = resolveChargingNow(st, p, connectReady)
+  const paymentMethod = resolvePaymentMethod(st, p)
+  const confirmationMode = resolveConfirmationMode(st, p)
+  const cancellationPolicy = resolveCancellationPolicy(st, p)
+  const modality = sessionType.modalities as unknown as { name: string; slug: string } | null
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const seeker = user ? await accountIdentity(user.id) : null
+  const disclaimer = modality?.slug === 'psychedelic-facilitation' ? PSYCHEDELIC_DISCLAIMER : null
+
+  const { data: capacityRow, error: capacityError } = await admin
+    .from('session_types')
+    .select('max_capacity')
+    .eq('id', sessionType.id)
+    .maybeSingle()
+
+  if (!capacityError && isGroupCapacity(capacityRow?.max_capacity)) {
+    const occurrences = await loadBookableOccurrences(sessionType.id)
+    const hintedOccurrence =
+      typeof sp.occurrence === 'string' && occurrences.some((occurrence) => occurrence.id === sp.occurrence)
+        ? sp.occurrence
+        : null
+    return (
+      <main className="min-h-screen bg-bg">
+        <GroupBookingFlow
+          practitioner={{ id: practitioner.id, name: practitioner.full_name, slug: practitioner.slug }}
+          sessionType={{
+            id: sessionType.id,
+            name: sessionType.name,
+            pricingModel: sessionType.pricing_model,
+            price: sessionType.price,
+            priceMin: sessionType.price_min,
+            priceMax: sessionType.price_max,
+            modalityName: modality?.name ?? null,
+          }}
+          occurrences={occurrences}
+          seeker={seeker ? { name: seeker.name, email: seeker.email } : null}
+          initialOccurrenceId={hintedOccurrence}
+          chargingNow={chargingNow}
+          paymentMethod={paymentMethod}
+          connectReady={connectReady}
+          cancellationPolicyCopy={CANCELLATION_POLICY_COPY[cancellationPolicy]}
+          offsiteInstructions={practitioner.offsite_payment_instructions}
+          stripePublishableKey={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null}
+          stripeAccountId={practitioner.stripe_account_id}
+          disclaimer={disclaimer}
+        />
+      </main>
+    )
+  }
 
   const [{ data: blockRows }, { data: bookedRows }, busyRows] = await Promise.all([
     admin
@@ -116,27 +176,9 @@ export default async function BookSessionPage({
     { now: DateTime.utc(), horizonDays: HORIZON_DAYS }
   )
 
-  const p = practitioner as unknown as PractitionerBookingFields
-  const st = sessionType as unknown as SessionTypeBookingFields
-  const connectReady = await isConnectReady(practitioner.stripe_account_id)
-  const chargingNow = resolveChargingNow(st, p, connectReady)
-  const paymentMethod = resolvePaymentMethod(st, p)
-  const confirmationMode = resolveConfirmationMode(st, p)
-  const cancellationPolicy = resolveCancellationPolicy(st, p)
-
   // City-only labels per block, keyed by block id, for pre-confirmation UI.
   const blockCities: Record<string, string | null> = {}
   for (const block of blocks) blockCities[block.id] = cityLabel(block.location_display)
-
-  const modality = sessionType.modalities as unknown as { name: string; slug: string } | null
-
-  // D20: signed-in seekers book as their account; identity is display-locked
-  // in the flow. Unauthenticated seekers get the in-flow magic-link step.
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const seeker = user ? await accountIdentity(user.id) : null
 
   // Server-side validation of the round-trip hint: the slot must be in the
   // freshly generated set, the format must be a real option. Anything else is
@@ -177,7 +219,7 @@ export default async function BookSessionPage({
         offsiteInstructions={practitioner.offsite_payment_instructions}
         stripePublishableKey={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null}
         stripeAccountId={practitioner.stripe_account_id}
-        disclaimer={modality?.slug === 'psychedelic-facilitation' ? PSYCHEDELIC_DISCLAIMER : null}
+        disclaimer={disclaimer}
       />
     </main>
   )

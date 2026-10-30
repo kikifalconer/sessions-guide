@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { DateTime } from 'luxon'
 import type { SeekerBookingView } from '@/lib/seekerData'
+import { eventRangeLabel } from '@/lib/groupBooking'
 import { cancelOwnBooking, type OwnCancelResult } from '@/app/account/actions'
 
 // Seeker-side bookings list + detail + self-cancel. Shared between /account
@@ -21,6 +22,11 @@ const STATUS_LABEL: Record<SeekerBookingView['status'], string> = {
 
 function whenLocal(iso: string): string {
   return DateTime.fromISO(iso).toLocal().toFormat('cccc, LLLL d, yyyy, h:mm a')
+}
+
+function whenShown(booking: SeekerBookingView): string {
+  if (!booking.isGroup) return whenLocal(booking.startUtc)
+  return eventRangeLabel(booking.startUtc, booking.endUtc, booking.timezone ?? 'UTC')
 }
 
 function canCancel(b: SeekerBookingView): boolean {
@@ -117,7 +123,7 @@ function BookingCard({ booking }: { booking: SeekerBookingView }) {
         <span className="min-w-0">
           <span className="label block text-dark">{booking.sessionName.toUpperCase()}</span>
           <span className="mt-1 block font-body text-sm font-light text-dark">
-            {whenLocal(booking.startUtc)} with {booking.practitionerName}
+            {whenShown(booking)} with {booking.practitionerName}
           </span>
         </span>
         <span className="caption shrink-0 text-right text-olive">

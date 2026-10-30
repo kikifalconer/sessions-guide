@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { BRAND_NAME } from '@/lib/brand'
 import { requirePractitioner } from '../requirePractitioner'
 import SessionsManager from '../SessionsManager'
+import { seatBlocksOccurrenceClose } from '@/lib/groupBooking'
 import type { GuideBlock, GuideEvent, OpenSeat } from '../groupEventTypes'
 import PageHeader from '@/components/dashboard/PageHeader'
 import PracticeNav from '@/components/dashboard/PracticeNav'
@@ -107,7 +108,7 @@ export default async function DashboardOfferingsPage() {
   const events: GuideEvent[] = (occurrenceRows ?? []).map((row) => {
     const id = row.id as string
     const status = row.status as GuideEvent['status']
-    const openSeats = seatsByOccurrence.get(id) ?? []
+    const seats = seatsByOccurrence.get(id) ?? []
     return {
       id,
       sessionTypeId: row.session_type_id as string,
@@ -117,9 +118,10 @@ export default async function DashboardOfferingsPage() {
       endDatetime: row.end_datetime as string,
       capacity: Number(row.capacity),
       status,
-      seatsTaken: openSeats.length,
+      seatsTaken: seats.length,
       timezone: blockZone.get(row.availability_block_id as string) ?? 'UTC',
-      openSeats: status === 'cancelling' ? openSeats : [],
+      // Completed clients stay in the seat count. They are not a failed refund.
+      openSeats: status === 'cancelling' ? seats.filter((seat) => seatBlocksOccurrenceClose(seat.status)) : [],
     }
   })
 

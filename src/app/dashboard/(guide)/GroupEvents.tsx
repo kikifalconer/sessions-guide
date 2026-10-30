@@ -167,12 +167,7 @@ export default function GroupEvents({
         <ul className="flex flex-col gap-3">
           {event.openSeats.map((seat) => (
             <li key={seat.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-dark">
-                {seat.status === 'completed'
-                  ? `${seat.clientName} already attended, so this event cannot close yet.`
-                  : `The refund for ${seat.clientName} did not go through.`}
-              </p>
-              {seat.status !== 'completed' && (
+              <p className="text-dark">The refund for {seat.clientName} did not go through.</p>
               <button
                 type="button"
                 className="btn-secondary w-full sm:w-auto"
@@ -194,7 +189,6 @@ export default function GroupEvents({
               >
                 Retry refund
               </button>
-              )}
             </li>
           ))}
         </ul>

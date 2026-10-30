@@ -15,7 +15,7 @@ export async function createCalendarEventForBooking(bookingId: string): Promise<
     const { data: booking } = await admin
       .from('bookings')
       .select(
-        `id, practitioner_id, status, google_event_id, booked_format,
+        `id, practitioner_id, occurrence_id, status, google_event_id, booked_format,
          booked_location_display, start_datetime, end_datetime, seeker_id, guest_name, guest_email, notes,
          session_types ( name )`
       )
@@ -23,6 +23,9 @@ export async function createCalendarEventForBooking(bookingId: string): Promise<
       .maybeSingle()
 
     if (!booking) return
+    // Group seats share one event-level calendar entry later. A per-seat
+    // event would duplicate that occurrence.
+    if (booking.occurrence_id) return
     if (booking.status !== 'confirmed') return // instant + paid only; not pending_*
     if (booking.google_event_id) return // idempotent
 

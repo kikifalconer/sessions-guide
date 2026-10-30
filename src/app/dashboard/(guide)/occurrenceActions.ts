@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { liveFreeBusyForWindow } from '@/lib/calendar'
 import { cancelBooking } from '@/lib/cancellation'
+import { seatBlocksOccurrenceClose } from '@/lib/groupBooking'
 import { validateGroupOccurrence, type GroupOccurrenceBlock } from '@/lib/groupOccurrence'
 import type { CancelEventResult, EventActionResult, GroupEventInput, TimeConflict } from './groupEventTypes'
 
@@ -385,12 +386,15 @@ async function finishCancellation(
   occurrenceId: string,
   practitionerId: string
 ): Promise<'cancelling' | 'cancelled'> {
-  const { count } = await admin
+  // Completed seats already happened and are not refunded, so they do not
+  // keep the event in cancelling. Cancelled seats are already resolved.
+  const { data: seatRows, error: seatError } = await admin
     .from('bookings')
-    .select('id', { count: 'exact', head: true })
+    .select('status')
     .eq('occurrence_id', occurrenceId)
-    .neq('status', 'cancelled')
-  if ((count ?? 0) > 0) return 'cancelling'
+  if (seatError) return 'cancelling'
+  const blocking = (seatRows ?? []).some((row) => seatBlocksOccurrenceClose(row.status as string))
+  if (blocking) return 'cancelling'
   const { error } = await admin
     .from('session_occurrences')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
@@ -450,6 +454,8 @@ export async function cancelGroupEvent(occurrenceId: string): Promise<CancelEven
 
   const failed: { bookingId: string; clientName: string; error: string }[] = []
   for (const seat of seats ?? []) {
+    // A completed seat is not refunded and does not block the event closing.
+    if (seat.status === 'completed') continue
     const name = await clientName(admin, (seat.seeker_id as string | null) ?? null, (seat.guest_name as string | null) ?? null)
     const result = await cancelOneSeat(admin, seat.id as string)
     if (!result.ok) failed.push({ bookingId: seat.id as string, clientName: name, error: result.error })
@@ -492,7 +498,7 @@ export async function retryGroupSeat(
   if (!seat) return { ok: false, error: 'That booking could not be found.' }
 
   const failed: { bookingId: string; clientName: string; error: string }[] = []
-  if (seat.status !== 'cancelled') {
+  if (seat.status !== 'cancelled' && seat.status !== 'completed') {
     const name = await clientName(
       admin,
       (seat.seeker_id as string | null) ?? null,

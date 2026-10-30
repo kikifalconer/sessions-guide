@@ -33,6 +33,13 @@ import {
   type BookingResult as CoreBookingResult,
 } from '@/lib/bookingFinalize'
 import { Interval } from 'luxon'
+import {
+  groupSeatDenialMessage,
+  isGroupCapacity,
+  type GroupBookResult,
+  type GroupBookingInput,
+  type GroupSeatCode,
+} from '@/lib/groupBooking'
 
 const GENERIC_ERROR = 'Something went wrong. Try again or contact support.'
 const SIGN_IN_ERROR = 'Sign in to book a session.'
@@ -80,6 +87,7 @@ type SessionTypeRow = SessionTypeBookingFields & {
   duration_minutes: number
   format: string
   is_active: boolean
+  max_capacity: number | null
 }
 
 function getStripe(): Stripe | null {
@@ -166,6 +174,14 @@ async function loadContext(practitionerId: string, sessionTypeId: string) {
   if (!p || !p.is_published) return null
   if (!st || !st.is_active || st.practitioner_id !== p.id) return null
   if (st.pricing_model === 'inquire') return null
+  // Separate from the row above so a database without 0018 still books 1:1.
+  const { data: capacityRow, error: capacityError } = await admin
+    .from('session_types')
+    .select('max_capacity')
+    .eq('id', st.id)
+    .maybeSingle()
+  st.max_capacity =
+    !capacityError && isGroupCapacity(capacityRow?.max_capacity) ? Number(capacityRow?.max_capacity) : null
   return { practitioner: p, sessionType: st }
 }
 
@@ -323,6 +339,7 @@ export async function createBooking(input: BookingInput): Promise<BookingResult>
   const context = await loadContext(input.practitionerId, input.sessionTypeId)
   if (!context) return { ok: false, error: GENERIC_ERROR }
   const { practitioner, sessionType } = context
+  if (isGroupCapacity(sessionType.max_capacity)) return { ok: false, error: GENERIC_ERROR }
 
   await expireStaleHolds(practitioner.id)
 
@@ -384,6 +401,7 @@ export async function createBookingHold(input: BookingInput): Promise<HoldResult
   const context = await loadContext(input.practitionerId, input.sessionTypeId)
   if (!context) return { ok: false, error: GENERIC_ERROR }
   const { practitioner, sessionType } = context
+  if (isGroupCapacity(sessionType.max_capacity)) return { ok: false, error: GENERIC_ERROR }
 
   await expireStaleHolds(practitioner.id)
 
@@ -470,6 +488,162 @@ export async function finalizeBooking(bookingId: string): Promise<BookingResult>
 
 // Releases a hold after explicit payment failure or abandonment.
 // F-28: caller must own the row. createBookingHold's catch uses releaseHoldCore.
+function denialFromRpc(code: string | null): string | null {
+  if (code === 'already_booked' || code === 'full' || code === 'started' || code === 'not_found') {
+    return groupSeatDenialMessage(code as GroupSeatCode)
+  }
+  return null
+}
+
+// Group seat. The occurrence end is the seat end; this action never writes
+// end_datetime (book_group_seat sets it from the occurrence, not start + duration).
+export async function bookGroupOccurrence(input: GroupBookingInput): Promise<GroupBookResult> {
+  const user = await requireUser()
+  if (!user) return { ok: false, error: SIGN_IN_ERROR }
+
+  const context = await loadContext(input.practitionerId, input.sessionTypeId)
+  if (!context) return { ok: false, error: GENERIC_ERROR }
+  const { practitioner, sessionType } = context
+  if (!isGroupCapacity(sessionType.max_capacity)) return { ok: false, error: GENERIC_ERROR }
+
+  const admin = createAdminClient()
+  const { data: occurrence } = await admin
+    .from('session_occurrences')
+    .select(
+      'id, practitioner_id, session_type_id, availability_block_id, format, start_datetime, status'
+    )
+    .eq('id', input.occurrenceId)
+    .maybeSingle()
+  if (
+    !occurrence ||
+    occurrence.practitioner_id !== practitioner.id ||
+    occurrence.session_type_id !== sessionType.id
+  ) {
+    return { ok: false, error: groupSeatDenialMessage('not_found') }
+  }
+
+  const { data: blockRow } = await admin
+    .from('availability_blocks')
+    .select(
+      'id, format, location_display, location_place_id, recurrence_rule, start_date, end_date, start_time, end_time, timezone'
+    )
+    .eq('id', occurrence.availability_block_id)
+    .maybeSingle()
+  if (!blockRow) return { ok: false, error: groupSeatDenialMessage('not_found') }
+  const block = blockRow as AvailabilityBlockRow
+
+  await expireStaleHolds(practitioner.id)
+
+  const stripe = getStripe()
+  const connectReady = await isConnectReady(stripe, practitioner.stripe_account_id)
+  const charging = resolveChargingNow(sessionType, practitioner, connectReady)
+  if (charging && (!stripe || !practitioner.stripe_account_id)) {
+    return { ok: false, error: GENERIC_ERROR }
+  }
+
+  const amount = charging ? resolveChargeAmount(sessionType, input.requestedAmount) : null
+  if (charging && amount === null) return { ok: false, error: 'Choose a valid amount.' }
+
+  const resolvedMode = resolveConfirmationMode(sessionType, practitioner)
+  const method = resolvePaymentMethod(sessionType, practitioner)
+  const status = charging ? 'pending_payment' : initialStatusWithoutCharge(resolvedMode)
+  const paymentStatus = charging
+    ? 'unpaid'
+    : method === 'offsite' || !connectReady
+      ? 'offsite'
+      : 'unpaid'
+  const bookedFormat = occurrence.format === 'in_person' ? 'in_person' : 'virtual'
+
+  const { data: rpcData, error: rpcError } = await admin.rpc('book_group_seat', {
+    p_occurrence_id: occurrence.id,
+    p_seeker_id: user.id,
+    p_confirmation_mode: resolvedMode,
+    p_status: status,
+    p_payment_status: paymentStatus,
+    p_notes: input.notes,
+  })
+  if (rpcError) {
+    if ((rpcError.message ?? '').includes('not_found')) {
+      return { ok: false, error: groupSeatDenialMessage('not_found') }
+    }
+    return { ok: false, error: GENERIC_ERROR }
+  }
+
+  const rpcRow = (Array.isArray(rpcData) ? rpcData[0] : rpcData) as
+    | { booking_id: string | null; error: string | null }
+    | null
+  const denied = denialFromRpc(rpcRow?.error ?? null)
+  if (denied) return { ok: false, error: denied }
+  const bookingId = rpcRow?.booking_id
+  if (!bookingId) return { ok: false, error: GENERIC_ERROR }
+
+  if (charging && stripe && practitioner.stripe_account_id && amount !== null) {
+    const identity = await accountIdentity(user.id)
+    try {
+      const intent = await stripe.paymentIntents.create(
+        {
+          amount: Math.round(amount * 100),
+          currency: CURRENCY,
+          automatic_payment_methods: { enabled: true },
+          metadata: { booking_id: bookingId, occurrence_id: occurrence.id },
+          ...(identity.email ? { receipt_email: identity.email } : {}),
+        },
+        { stripeAccount: practitioner.stripe_account_id }
+      )
+      if (!intent.client_secret) throw new Error('no client secret')
+      await admin.from('bookings').update({ stripe_payment_intent_id: intent.id }).eq('id', bookingId)
+      return {
+        ok: true,
+        mode: 'hold',
+        bookingId,
+        clientSecret: intent.client_secret,
+        stripeAccountId: practitioner.stripe_account_id,
+      }
+    } catch {
+      await releaseHoldCore(bookingId)
+      return { ok: false, error: GENERIC_ERROR }
+    }
+  }
+
+  const { data: booked } = await admin
+    .from('bookings')
+    .select('id, seeker_token')
+    .eq('id', bookingId)
+    .maybeSingle()
+  if (!booked?.seeker_token) return { ok: false, error: GENERIC_ERROR }
+
+  const bookingInput: BookingInput = {
+    practitionerId: practitioner.id,
+    sessionTypeId: sessionType.id,
+    blockId: block.id,
+    startUtc: occurrence.start_datetime as string,
+    bookedFormat,
+    notes: input.notes,
+    requestedAmount: input.requestedAmount,
+  }
+  await finishBooking(
+    bookingId,
+    booked.seeker_token as string,
+    bookingInput,
+    user.id,
+    block,
+    practitioner.id,
+    practitioner.full_name,
+    sessionType.name,
+    status,
+    null
+  )
+
+  return {
+    ok: true,
+    mode: 'booked',
+    bookingId,
+    status,
+    locationDisplay: bookedFormat === 'in_person' ? block.location_display : null,
+    whenLabel: whenLabel(occurrence.start_datetime as string, block.timezone),
+  }
+}
+
 export async function releaseHold(bookingId: string): Promise<void> {
   const user = await requireUser()
   if (!user) return

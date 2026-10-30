@@ -7,6 +7,8 @@ import ProfileHero from './ProfileHero'
 import InfoStrip, { type ProfileLink } from './InfoStrip'
 import AboutSection from './AboutSection'
 import SessionsSection, { type SessionCard } from './SessionsSection'
+import { isGroupCapacity } from '@/lib/groupBooking'
+import { loadPublicOccurrenceLists } from '@/lib/publicOccurrences'
 import { detectPlatform } from '@/lib/links'
 import { JsonLd, practitionerJsonLd, type SessionTypeSeo } from '@/lib/seo/structuredData'
 import { isFixture } from '@/lib/indexable'
@@ -207,6 +209,22 @@ export default async function PractitionerProfilePage({
       ? sortedSessionTypes.slice(0, 1)
       : sortedSessionTypes
 
+  // Capacity is read on its own so a database that has not applied 0018
+  // still renders the profile. The number never reaches the client.
+  const visibleIds = visibleSessionTypes.map((st) => st.id)
+  const { data: capacityRows, error: capacityError } = visibleIds.length
+    ? await createAdminClient()
+        .from('session_types')
+        .select('id, max_capacity')
+        .in('id', visibleIds)
+    : { data: [], error: null }
+  const groupTypeIds = capacityError
+    ? []
+    : (capacityRows ?? [])
+        .filter((row) => isGroupCapacity(row.max_capacity))
+        .map((row) => row.id as string)
+  const occurrenceLists = await loadPublicOccurrenceLists(groupTypeIds)
+
   const sessions: SessionCard[] = visibleSessionTypes
     .map((st) => ({
       id: st.id,
@@ -215,6 +233,7 @@ export default async function PractitionerProfilePage({
       durationMinutes: st.duration_minutes,
       photoUrl: st.photo_url,
       isInquire: st.pricing_model === 'inquire',
+      occurrences: groupTypeIds.includes(st.id) ? (occurrenceLists.get(st.id) ?? []) : null,
     }))
 
   // JSON-LD reuses the data already loaded above. It reflects exactly what the

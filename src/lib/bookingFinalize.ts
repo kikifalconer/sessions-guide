@@ -7,6 +7,8 @@ import { sendBookingEmails } from '@/lib/email'
 import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
 import { cancelUrl } from '@/lib/siteUrl'
 import { createCalendarEventForBooking } from '@/lib/calendarSync'
+import { finalizeZeroRowOutcome, SEAT_RELEASED_MESSAGE } from '@/lib/groupBooking'
+import { refundSucceededChargeOnCancelledBooking } from '@/lib/orphanCharge'
 import { cancelHeldPaymentIntent } from '@/lib/paymentIntents'
 
 // Unauthenticated cores for paid-hold finalization and hold release.
@@ -93,13 +95,17 @@ export async function finalizeBookingCore(bookingId: string): Promise<BookingRes
   const { data: booking } = await admin
     .from('bookings')
     .select(
-      'id, practitioner_id, session_type_id, availability_block_id, status, stripe_payment_intent_id, guest_name, guest_email, seeker_id, booked_format, booked_location_display, start_datetime, notes, seeker_token'
+      'id, practitioner_id, session_type_id, availability_block_id, status, stripe_payment_intent_id, stripe_refund_id, guest_name, guest_email, seeker_id, booked_format, booked_location_display, start_datetime, notes, seeker_token'
     )
     .eq('id', bookingId)
     .maybeSingle()
 
   if (!booking || !booking.stripe_payment_intent_id) return { ok: false, error: GENERIC_ERROR }
-  if (booking.status !== 'confirmed' && booking.status !== 'pending_payment') {
+  if (
+    booking.status !== 'confirmed' &&
+    booking.status !== 'pending_payment' &&
+    booking.status !== 'cancelled'
+  ) {
     return { ok: false, error: GENERIC_ERROR }
   }
   const alreadyConfirmed = booking.status === 'confirmed' // idempotent re-entry
@@ -143,6 +149,12 @@ export async function finalizeBookingCore(bookingId: string): Promise<BookingRes
     return { ok: false, error: 'Payment has not completed. Try again or contact support.' }
   }
 
+  // The seat was released before this confirmation ran (abandoned hold, or the
+  // occurrence was cancelled). Refund the captured charge and do not confirm.
+  if (booking.status === 'cancelled') {
+    return refundReleasedSeat(stripe, booking, intent)
+  }
+
   // NOTE: the calendar-busy re-check lives at hold-time (validateSlot, called
   // from createBookingHold) BEFORE the card is charged. It is deliberately NOT
   // repeated here: this runs after a successful charge, so refusing would mean
@@ -163,17 +175,38 @@ export async function finalizeBookingCore(bookingId: string): Promise<BookingRes
     .select('id')
   if (error) return { ok: false, error: GENERIC_ERROR }
 
-  // A concurrent path (client finalize vs. the payment_intent.succeeded webhook)
-  // already confirmed this booking. Return the idempotent success WITHOUT
-  // re-sending emails or re-creating the calendar event.
+  // Zero rows means the pending_payment row changed under us. Re-read it.
+  // Confirmed is the other finalizer winning. Cancelled is a release that
+  // happened after the charge, and that charge is refunded. Anything else
+  // stays unconfirmed.
   if (!confirmedRows || confirmedRows.length === 0) {
-    return {
-      ok: true,
-      bookingId,
-      status: 'confirmed',
-      locationDisplay: booking.booked_location_display,
-      whenLabel: when,
+    const { data: fresh } = await admin
+      .from('bookings')
+      .select('id, status, practitioner_id, stripe_refund_id')
+      .eq('id', bookingId)
+      .maybeSingle()
+    const outcome = finalizeZeroRowOutcome((fresh?.status as string | undefined) ?? '')
+    if (outcome === 'idempotent_confirmed') {
+      return {
+        ok: true,
+        bookingId,
+        status: 'confirmed',
+        locationDisplay: booking.booked_location_display,
+        whenLabel: when,
+      }
     }
+    if (outcome === 'refund_released' && fresh) {
+      return refundReleasedSeat(
+        stripe,
+        {
+          id: fresh.id as string,
+          practitioner_id: fresh.practitioner_id as string,
+          stripe_refund_id: (fresh.stripe_refund_id as string | null) ?? null,
+        },
+        intent
+      )
+    }
+    return { ok: false, error: GENERIC_ERROR }
   }
 
   // Outbound calendar event now that payment confirmed the booking. Idempotent
@@ -223,6 +256,21 @@ export async function finalizeBookingCore(bookingId: string): Promise<BookingRes
     locationDisplay: booking.booked_location_display,
     whenLabel: when,
   }
+}
+
+async function refundReleasedSeat(
+  stripe: Stripe,
+  booking: { id: string; practitioner_id: string; stripe_refund_id: string | null },
+  intent: Stripe.PaymentIntent
+): Promise<BookingResult> {
+  const refunded = await refundSucceededChargeOnCancelledBooking(
+    stripe,
+    booking,
+    intent.id,
+    intent.amount_received
+  )
+  if (!refunded) return { ok: false, error: GENERIC_ERROR }
+  return { ok: false, error: SEAT_RELEASED_MESSAGE }
 }
 
 // Releases a hold after explicit payment failure or abandonment. Cancels the
