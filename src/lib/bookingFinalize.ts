@@ -4,10 +4,11 @@ import Stripe from 'stripe'
 import { DateTime } from 'luxon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendBookingEmails } from '@/lib/email'
+import { notifyGroupSeatBooked } from '@/lib/groupNotify'
 import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
 import { cancelUrl } from '@/lib/siteUrl'
 import { createCalendarEventForBooking } from '@/lib/calendarSync'
-import { finalizeZeroRowOutcome, SEAT_RELEASED_MESSAGE } from '@/lib/groupBooking'
+import { eventRangeLabel, finalizeZeroRowOutcome, SEAT_RELEASED_MESSAGE } from '@/lib/groupBooking'
 import { refundSucceededChargeOnCancelledBooking } from '@/lib/orphanCharge'
 import { cancelHeldPaymentIntent } from '@/lib/paymentIntents'
 
@@ -95,7 +96,7 @@ export async function finalizeBookingCore(bookingId: string): Promise<BookingRes
   const { data: booking } = await admin
     .from('bookings')
     .select(
-      'id, practitioner_id, session_type_id, availability_block_id, status, stripe_payment_intent_id, stripe_refund_id, guest_name, guest_email, seeker_id, booked_format, booked_location_display, start_datetime, notes, seeker_token'
+      'id, practitioner_id, session_type_id, availability_block_id, status, stripe_payment_intent_id, stripe_refund_id, guest_name, guest_email, seeker_id, booked_format, booked_location_display, start_datetime, end_datetime, notes, seeker_token'
     )
     .eq('id', bookingId)
     .maybeSingle()
@@ -234,6 +235,34 @@ export async function finalizeBookingCore(bookingId: string): Promise<BookingRes
     identity.name,
     identity.email ?? ''
   )
+
+  // occurrence_id arrives with 0018. A missing column is a 1:1 booking for
+  // this path, so the existing confirmation still sends.
+  const { data: groupLink, error: groupLinkError } = await admin
+    .from('bookings')
+    .select('occurrence_id')
+    .eq('id', bookingId)
+    .maybeSingle()
+  const occurrenceId = groupLinkError ? null : ((groupLink?.occurrence_id as string | null) ?? null)
+  if (occurrenceId) {
+    await notifyGroupSeatBooked(bookingId)
+    const range =
+      booking.end_datetime
+        ? eventRangeLabel(
+            booking.start_datetime,
+            booking.end_datetime as string,
+            block?.timezone ?? 'UTC'
+          )
+        : when
+    return {
+      ok: true,
+      bookingId,
+      status: 'confirmed',
+      locationDisplay: booking.booked_location_display,
+      whenLabel: range,
+    }
+  }
+
   await sendBookingEmails({
     seekerName: identity.name,
     seekerEmail: identity.email ?? '',

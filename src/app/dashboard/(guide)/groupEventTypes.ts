@@ -19,6 +19,12 @@ export type OpenSeat = {
   status: string
 }
 
+export type DirectSeat = {
+  id: string
+  clientName: string
+  email: string
+}
+
 export type GuideEvent = {
   id: string
   sessionTypeId: string
@@ -30,8 +36,11 @@ export type GuideEvent = {
   status: 'scheduled' | 'cancelling' | 'cancelled'
   seatsTaken: number
   timezone: string
+  googleEventId: string | null
+  calendarConnected: boolean
   // Non-cancelled seats. Shown only while a cancel is waiting on a refund.
   openSeats: OpenSeat[]
+  directSeats: DirectSeat[]
 }
 
 export type GroupEventInput = {

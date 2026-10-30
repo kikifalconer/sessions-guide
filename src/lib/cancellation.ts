@@ -3,8 +3,16 @@ import { DateTime } from 'luxon'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveCancellationPolicy } from '@/lib/booking'
 import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
-import { sendCancellationEmails } from '@/lib/email'
+import { sendCancellationEmails, sendGroupClientNotice } from '@/lib/email'
 import { deleteCalendarEventForBooking } from '@/lib/calendarSync'
+import {
+  eventRangeLabel,
+  groupEventCancelledBody,
+  groupRefundStatus,
+  isGuideAddedOffsiteSeat,
+  sendsLegacyCancellationEmail,
+} from '@/lib/groupBooking'
+import { seatsTakenNote } from '@/lib/groupNotify'
 
 // Standalone, route-agnostic cancellation + refund engine. Callable unchanged
 // from the seeker cancel route (this pass) and the future practitioner cancel
@@ -109,6 +117,8 @@ type BookingContext = {
   seeker_id: string | null
   guest_name: string | null
   guest_email: string | null
+  occurrence_id: string | null
+  end_datetime: string | null
   cancellation_policy: string | null // session type override
   session_name: string
   practitioner_name: string
@@ -117,20 +127,28 @@ type BookingContext = {
   timezone: string
 }
 
-async function loadBooking(bookingId: string): Promise<BookingContext | null> {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('bookings')
-    .select(
-      `id, practitioner_id, session_type_id, availability_block_id, status,
+const BOOKING_SELECT = `id, practitioner_id, session_type_id, availability_block_id, status,
        payment_status, amount_paid, amount_refunded, stripe_payment_intent_id, stripe_refund_id,
-       cancelled_at, start_datetime, booked_format, booked_location_display, seeker_id, guest_name, guest_email,
+       cancelled_at, start_datetime, end_datetime, booked_format, booked_location_display, seeker_id, guest_name, guest_email,
        session_types ( name, cancellation_policy ),
        practitioners ( full_name, cancellation_policy, stripe_account_id ),
        availability_blocks ( timezone )`
-    )
+
+async function loadBooking(bookingId: string): Promise<BookingContext | null> {
+  const admin = createAdminClient()
+  // occurrence_id is added in 0018. A database that has not applied it must
+  // still cancel 1:1 bookings, so a missing column falls back to the base select.
+  const withOccurrence = await admin
+    .from('bookings')
+    .select(`${BOOKING_SELECT}, occurrence_id`)
     .eq('id', bookingId)
     .maybeSingle()
+  const row = withOccurrence.error
+    ? (
+        await admin.from('bookings').select(BOOKING_SELECT).eq('id', bookingId).maybeSingle()
+      ).data
+    : withOccurrence.data
+  const data = row as Record<string, unknown> | null
   if (!data) return null
 
   const st = data.session_types as unknown as { name: string; cancellation_policy: string | null } | null
@@ -142,23 +160,25 @@ async function loadBooking(bookingId: string): Promise<BookingContext | null> {
   const block = data.availability_blocks as unknown as { timezone: string } | null
 
   return {
-    id: data.id,
-    practitioner_id: data.practitioner_id,
-    session_type_id: data.session_type_id,
-    availability_block_id: data.availability_block_id,
-    status: data.status,
-    payment_status: data.payment_status,
-    amount_paid: data.amount_paid,
-    amount_refunded: data.amount_refunded,
-    stripe_payment_intent_id: data.stripe_payment_intent_id,
-    stripe_refund_id: data.stripe_refund_id,
-    cancelled_at: data.cancelled_at,
-    start_datetime: data.start_datetime,
-    booked_format: data.booked_format,
-    booked_location_display: data.booked_location_display,
-    seeker_id: data.seeker_id,
-    guest_name: data.guest_name,
-    guest_email: data.guest_email,
+    id: data.id as string,
+    practitioner_id: data.practitioner_id as string,
+    session_type_id: data.session_type_id as string,
+    availability_block_id: data.availability_block_id as string,
+    status: data.status as string,
+    payment_status: data.payment_status as BookingContext['payment_status'],
+    amount_paid: data.amount_paid as number | null,
+    amount_refunded: data.amount_refunded as number | null,
+    stripe_payment_intent_id: data.stripe_payment_intent_id as string | null,
+    stripe_refund_id: data.stripe_refund_id as string | null,
+    cancelled_at: data.cancelled_at as string | null,
+    start_datetime: data.start_datetime as string,
+    booked_format: data.booked_format as 'virtual' | 'in_person',
+    booked_location_display: data.booked_location_display as string | null,
+    seeker_id: data.seeker_id as string | null,
+    guest_name: data.guest_name as string | null,
+    guest_email: data.guest_email as string | null,
+    occurrence_id: (data.occurrence_id as string | null) ?? null,
+    end_datetime: (data.end_datetime as string | null) ?? null,
     cancellation_policy: st?.cancellation_policy ?? null,
     session_name: st?.name ?? 'Session',
     practitioner_name: p?.full_name ?? 'your practitioner',
@@ -190,8 +210,11 @@ export async function cancelBooking(args: {
   bookingId: string
   cancelledBy: 'seeker' | 'practitioner'
   reason?: string | null
+  // Guide cancel of a whole event says the event was cancelled. A single seat
+  // says the seat was cancelled. Both replace the old per-seat pair.
+  notice?: 'event' | 'seat'
 }): Promise<CancelResult> {
-  const { bookingId, cancelledBy, reason = null } = args
+  const { bookingId, cancelledBy, reason = null, notice = 'seat' } = args
   const admin = createAdminClient()
 
   const booking = await loadBooking(bookingId)
@@ -259,8 +282,15 @@ export async function cancelBooking(args: {
 
   const onPlatformPaid = booking.payment_status === 'paid'
   const isOffsite = booking.payment_status === 'offsite'
+  const guideAdded = isGuideAddedOffsiteSeat({
+    occurrenceId: booking.occurrence_id,
+    seekerId: booking.seeker_id,
+    paymentStatus: booking.payment_status,
+  })
 
-  if (onPlatformPaid && refund.amount > 0 && !booking.stripe_refund_id) {
+  // A Guide-added seat was paid outside the platform. No Stripe refund and no
+  // offsite obligation. The seat simply comes off the event.
+  if (!guideAdded && onPlatformPaid && refund.amount > 0 && !booking.stripe_refund_id) {
     const stripe = getStripe()
     if (
       !stripe ||
@@ -286,7 +316,7 @@ export async function cancelBooking(args: {
     } catch {
       return { ok: false, error: 'The refund could not be processed. Try again or contact support.' }
     }
-  } else if (isOffsite && fraction > 0) {
+  } else if (!guideAdded && isOffsite && fraction > 0) {
     // Stripe never processed this money; the practitioner owes it manually.
     // Keyed off the POLICY, not a dollar amount: the platform never held these
     // funds and cannot assert what changed hands (F-21).
@@ -343,24 +373,56 @@ export async function cancelBooking(args: {
   // interfere with the refund engine.
   await deleteCalendarEventForBooking(bookingId)
 
-  const when = whenLabel(booking.start_datetime, booking.timezone)
+  const when =
+    booking.occurrence_id && booking.end_datetime
+      ? eventRangeLabel(booking.start_datetime, booking.end_datetime, booking.timezone)
+      : whenLabel(booking.start_datetime, booking.timezone)
   // Account-backed rows resolve to the seeker's account name/email; historical
   // guest rows keep their guest fields (Amendment 3).
   const identity = await resolveSeekerIdentity(booking)
-  await sendCancellationEmails({
-    seekerName: identity.name,
-    seekerEmail: identity.email ?? '',
-    practitionerName: booking.practitioner_name,
-    practitionerEmail: await practitionerEmail(booking.practitioner_id),
-    sessionName: booking.session_name,
-    whenLabel: when,
-    cancelledBy,
-    refundAmount: refund.amount,
-    isFullRefund: refund.isFull,
-    offsiteObligation,
-    offsiteRefundPercent,
-    paymentStatus: newPaymentStatus as 'paid' | 'unpaid' | 'refunded' | 'offsite',
-  })
+  const paymentStatus = newPaymentStatus as 'paid' | 'unpaid' | 'refunded' | 'offsite'
+  if (sendsLegacyCancellationEmail(cancelledBy, booking.occurrence_id)) {
+    const guideNote =
+      cancelledBy === 'seeker' && booking.occurrence_id
+        ? await seatsTakenNote(booking.occurrence_id)
+        : null
+    await sendCancellationEmails({
+      seekerName: identity.name,
+      seekerEmail: identity.email ?? '',
+      practitionerName: booking.practitioner_name,
+      practitionerEmail: await practitionerEmail(booking.practitioner_id),
+      sessionName: booking.session_name,
+      whenLabel: when,
+      cancelledBy,
+      refundAmount: refund.amount,
+      isFullRefund: refund.isFull,
+      offsiteObligation,
+      offsiteRefundPercent,
+      paymentStatus,
+      guideNote,
+    })
+  } else {
+    const format = booking.booked_format === 'in_person' ? 'in_person' : 'virtual'
+    await sendGroupClientNotice({
+      to: identity.email ?? '',
+      subject: notice === 'event' ? 'This event was cancelled' : 'Your seat was cancelled',
+      text: groupEventCancelledBody({
+        kind: notice,
+        title: booking.session_name,
+        rangeLabel: when,
+        timezone: booking.timezone,
+        format,
+        refundStatus: groupRefundStatus({
+          guideAdded,
+          paymentStatus,
+          refundAmount: refund.amount,
+          isFullRefund: refund.isFull,
+          offsiteObligation,
+          offsiteRefundPercent,
+        }),
+      }),
+    })
+  }
 
   return {
     ok: true,

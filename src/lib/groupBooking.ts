@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon'
+import { BRAND_NAME } from '@/lib/brand'
 
 // Pure group-booking rules shared by the public pages, the Practice cancel
 // close, paid finalization, and scripts/check-group-validation.ts.
@@ -190,4 +191,200 @@ export function finalizeZeroRowOutcome(status: string): ZeroRowFinalize {
   if (status === 'confirmed') return 'idempotent_confirmed'
   if (status === 'cancelled') return 'refund_released'
   return 'error'
+}
+
+export function seatsTakenLabel(taken: number, capacity: number): string {
+  return `${taken} of ${capacity} seats taken`
+}
+
+// One calendar event for the occurrence. Delete only once it is cancelled and
+// an id was stored. A failed delete keeps the id so a retry can finish.
+export function occurrenceCalendarAction(
+  status: string,
+  googleEventId: string | null
+): 'delete' | 'upsert' | 'skip' {
+  if (status === 'cancelled') return googleEventId ? 'delete' : 'skip'
+  if (status === 'scheduled' || status === 'cancelling') return 'upsert'
+  return 'skip'
+}
+
+// The note is for a connected calendar that is missing its event, or a
+// cancelled event whose delete did not finish. No connection is not an error.
+export function calendarNeedsRetry(
+  status: string,
+  googleEventId: string | null,
+  calendarConnected: boolean
+): boolean {
+  if (!calendarConnected) return false
+  if (status === 'cancelled') return Boolean(googleEventId)
+  if (status === 'scheduled' || status === 'cancelling') return !googleEventId
+  return false
+}
+
+export function occurrenceCalendarDescription(input: {
+  format: 'virtual' | 'in_person'
+  capacity: number
+  locationDisplay: string | null
+}): string {
+  const lines = [
+    input.format === 'in_person' ? IN_PERSON_LABEL : 'Virtual',
+    `${input.capacity} seats`,
+  ]
+  if (input.format === 'in_person' && input.locationDisplay?.trim()) {
+    lines.push(input.locationDisplay.trim())
+  }
+  return lines.join('\n')
+}
+
+// A Guide-added seat: no account, paid outside the platform, no Stripe refund.
+export function isGuideAddedOffsiteSeat(seat: {
+  occurrenceId: string | null
+  seekerId: string | null
+  paymentStatus: string | null
+}): boolean {
+  return Boolean(seat.occurrenceId) && !seat.seekerId && seat.paymentStatus === 'offsite'
+}
+
+// The old per-seat cancellation pair is replaced for a Guide cancel of a group
+// seat, so the client receives one event email. A client cancelling their own
+// seat keeps the existing pair.
+export function sendsLegacyCancellationEmail(
+  cancelledBy: 'seeker' | 'practitioner',
+  occurrenceId: string | null
+): boolean {
+  return !(cancelledBy === 'practitioner' && occurrenceId)
+}
+
+export function cronCancelsHold(
+  seat: {
+    occurrenceId: string | null
+    seekerId: string | null
+    status: string
+    paymentStatus: string | null
+    createdAt: string
+  },
+  now: Date
+): boolean {
+  if (!seat.occurrenceId) return false
+  return isStaleOnPlatformHold({ ...seat, occurrenceId: seat.occurrenceId }, now)
+}
+
+export function directSeatInput(
+  name: string,
+  email: string
+): { name: string; email: string } | { error: string } {
+  const trimmedName = name.trim()
+  const trimmedEmail = email.trim().toLowerCase()
+  if (!trimmedName) return { error: 'Add a name.' }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    return { error: 'Add an email address.' }
+  }
+  return { name: trimmedName, email: trimmedEmail }
+}
+
+export function directSeatDenialMessage(code: 'full' | 'already_booked' | 'not_found'): string {
+  switch (code) {
+    case 'full':
+      return 'This event is full.'
+    case 'already_booked':
+      return 'That client already has a seat in this event.'
+    case 'not_found':
+      return 'This event is no longer available.'
+  }
+}
+
+export function groupFormatLabel(format: 'virtual' | 'in_person'): string {
+  return format === 'in_person' ? IN_PERSON_LABEL : 'Virtual'
+}
+
+export function groupPlaceLine(
+  format: 'virtual' | 'in_person',
+  locationDisplay: string | null,
+  link: string
+): string {
+  if (format === 'in_person' && locationDisplay?.trim()) return `Where: ${locationDisplay.trim()}`
+  return `Link: ${link}`
+}
+
+export function groupRefundStatus(input: {
+  guideAdded: boolean
+  paymentStatus: string
+  refundAmount: number
+  isFullRefund: boolean
+  offsiteObligation: boolean
+  offsiteRefundPercent: number
+}): string {
+  if (input.guideAdded) {
+    return 'You paid your Guide directly. No refund is sent from the platform.'
+  }
+  if (input.paymentStatus === 'refunded' && input.refundAmount > 0) {
+    const kind = input.isFullRefund ? 'A full refund' : 'A partial refund'
+    return `${kind} of $${input.refundAmount.toFixed(2)} is on its way. Refunds usually take 5 to 10 business days to appear.`
+  }
+  if (input.offsiteObligation) {
+    const share =
+      input.offsiteRefundPercent >= 100 ? 'a full refund' : `a ${input.offsiteRefundPercent}% refund`
+    return `You paid your Guide directly, so this refund is theirs to issue. Their cancellation policy entitles you to ${share}.`
+  }
+  if (input.paymentStatus === 'unpaid') return 'You were not charged.'
+  return 'No refund applies under the cancellation policy for this event.'
+}
+
+export function groupSeatClientBody(input: {
+  confirmed: boolean
+  title: string
+  rangeLabel: string
+  timezone: string
+  format: 'virtual' | 'in_person'
+  placeLine: string
+}): string {
+  const lines = [
+    input.confirmed
+      ? `Your seat on ${BRAND_NAME} is confirmed.`
+      : `Your seat on ${BRAND_NAME} is reserved.`,
+    '',
+    input.title,
+    `${input.rangeLabel} (${input.timezone})`,
+    `Format: ${groupFormatLabel(input.format)}`,
+    input.placeLine,
+  ]
+  return lines.join('\n')
+}
+
+export function groupGuideSeatBody(input: {
+  confirmed: boolean
+  clientName: string
+  title: string
+  rangeLabel: string
+  timezone: string
+  taken: number
+  capacity: number
+}): string {
+  return [
+    input.confirmed ? 'A client booked a seat.' : 'A client reserved a seat.',
+    '',
+    input.clientName,
+    input.title,
+    `${input.rangeLabel} (${input.timezone})`,
+    seatsTakenLabel(input.taken, input.capacity),
+  ].join('\n')
+}
+
+export function groupEventCancelledBody(input: {
+  kind: 'event' | 'seat'
+  title: string
+  rangeLabel: string
+  timezone: string
+  format: 'virtual' | 'in_person'
+  refundStatus: string
+}): string {
+  return [
+    input.kind === 'event' ? 'This event was cancelled.' : 'Your seat was cancelled.',
+    '',
+    input.title,
+    `${input.rangeLabel} (${input.timezone})`,
+    `Format: ${groupFormatLabel(input.format)}`,
+    '',
+    input.refundStatus,
+  ].join('\n')
 }

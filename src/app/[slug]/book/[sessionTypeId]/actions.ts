@@ -19,6 +19,7 @@ import {
   type SessionTypeBookingFields,
 } from '@/lib/booking'
 import { sendBookingEmails } from '@/lib/email'
+import { notifyGroupSeatBooked } from '@/lib/groupNotify'
 import { accountIdentity, type SeekerIdentity } from '@/lib/seekerIdentity'
 import { createCalendarEventForBooking } from '@/lib/calendarSync'
 import { fetchCalendarBusyWindows, liveFreeBusyForWindow } from '@/lib/calendar'
@@ -34,6 +35,7 @@ import {
 } from '@/lib/bookingFinalize'
 import { Interval } from 'luxon'
 import {
+  eventRangeLabel,
   groupSeatDenialMessage,
   isGroupCapacity,
   type GroupBookResult,
@@ -510,7 +512,7 @@ export async function bookGroupOccurrence(input: GroupBookingInput): Promise<Gro
   const { data: occurrence } = await admin
     .from('session_occurrences')
     .select(
-      'id, practitioner_id, session_type_id, availability_block_id, format, start_datetime, status'
+      'id, practitioner_id, session_type_id, availability_block_id, format, start_datetime, end_datetime, status'
     )
     .eq('id', input.occurrenceId)
     .maybeSingle()
@@ -631,7 +633,8 @@ export async function bookGroupOccurrence(input: GroupBookingInput): Promise<Gro
     practitioner.full_name,
     sessionType.name,
     status,
-    null
+    null,
+    true
   )
 
   return {
@@ -640,7 +643,11 @@ export async function bookGroupOccurrence(input: GroupBookingInput): Promise<Gro
     bookingId,
     status,
     locationDisplay: bookedFormat === 'in_person' ? block.location_display : null,
-    whenLabel: whenLabel(occurrence.start_datetime as string, block.timezone),
+    whenLabel: eventRangeLabel(
+      occurrence.start_datetime as string,
+      occurrence.end_datetime as string,
+      block.timezone
+    ),
   }
 }
 
@@ -674,11 +681,16 @@ async function finishBooking(
   practitionerName: string,
   sessionName: string,
   status: string,
-  amountLabel: string | null
+  amountLabel: string | null,
+  group = false
 ): Promise<void> {
   const identity: SeekerIdentity = await accountIdentity(seekerId)
 
   await upsertClientRow(practitionerId, seekerId, identity.name, identity.email ?? '')
+  if (group) {
+    await notifyGroupSeatBooked(bookingId)
+    return
+  }
   await sendBookingEmails({
     seekerName: identity.name,
     seekerEmail: identity.email ?? '',

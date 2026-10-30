@@ -3,10 +3,14 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { DateTime } from 'luxon'
+import { calendarNeedsRetry } from '@/lib/groupBooking'
 import {
+  addDirectSeat,
   cancelGroupEvent,
   createGroupEvent,
+  removeDirectSeat,
   retryGroupSeat,
+  retryOccurrenceCalendar,
   updateGroupEvent,
 } from './occurrenceActions'
 import type { GuideBlock, GuideEvent, TimeConflict } from './groupEventTypes'
@@ -62,6 +66,73 @@ function eventRange(event: GuideEvent): string {
 function localValue(iso: string, zone: string): string {
   const dt = DateTime.fromISO(iso, { setZone: true }).setZone(zone)
   return dt.isValid ? dt.toFormat("yyyy-MM-dd'T'HH:mm") : ''
+}
+
+function DirectPayForm({ eventId, disabled }: { eventId: string; disabled: boolean }) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const nameId = `direct-name-${eventId}`
+  const emailId = `direct-email-${eventId}`
+
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(event) => {
+        event.preventDefault()
+        setError(null)
+        const submittedName = name
+        const submittedEmail = email
+        startTransition(async () => {
+          const result = await addDirectSeat(eventId, submittedName, submittedEmail)
+          if (!result.ok) {
+            setError(result.error)
+            return
+          }
+          setName('')
+          setEmail('')
+          router.refresh()
+        })
+      }}
+    >
+      <p className="caption text-dark">Add a client who paid you directly.</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="caption text-dark opacity-70" htmlFor={nameId}>
+            Name
+          </label>
+          <input
+            id={nameId}
+            className={FIELD}
+            value={name}
+            autoComplete="name"
+            disabled={disabled || pending}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </div>
+        <div>
+          <label className="caption text-dark opacity-70" htmlFor={emailId}>
+            Email
+          </label>
+          <input
+            id={emailId}
+            type="email"
+            className={FIELD}
+            value={email}
+            autoComplete="email"
+            disabled={disabled || pending}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </div>
+      </div>
+      {error && <p className="caption text-olive">{error}</p>}
+      <button type="submit" className="caption w-fit text-olive" disabled={disabled || pending}>
+        Add seat
+      </button>
+    </form>
+  )
 }
 
 export default function GroupEvents({
@@ -132,6 +203,26 @@ export default function GroupEvents({
         {event.status === 'cancelled' && (
           <p className="caption mt-1 text-dark opacity-70">Cancelled</p>
         )}
+        {calendarNeedsRetry(event.status, event.googleEventId, event.calendarConnected) && (
+          <p className="caption mt-1 text-olive">
+            Calendar not synced.{' '}
+            <button
+              type="button"
+              className="underline"
+              disabled={pending}
+              onClick={() => {
+                setError(null)
+                startTransition(async () => {
+                  const result = await retryOccurrenceCalendar(event.id)
+                  if (!result.ok) setError(result.error)
+                  else refresh()
+                })
+              }}
+            >
+              Retry
+            </button>
+          </p>
+        )}
       </div>
       {event.status === 'scheduled' && (
         <div className="flex flex-wrap items-center gap-4">
@@ -163,6 +254,32 @@ export default function GroupEvents({
           </button>
         </div>
       )}
+      {event.status === 'scheduled' && event.directSeats.length > 0 && (
+        <ul className="flex flex-col gap-2">
+          {event.directSeats.map((seat) => (
+            <li key={seat.id} className="flex flex-wrap items-center gap-3">
+              <span className="text-dark">{seat.clientName}</span>
+              <span className="caption text-dark opacity-70">Paid directly</span>
+              <button
+                type="button"
+                className="caption text-olive"
+                disabled={pending}
+                onClick={() => {
+                  setError(null)
+                  startTransition(async () => {
+                    const result = await removeDirectSeat(event.id, seat.id)
+                    if (!result.ok) setError(result.error)
+                    else refresh()
+                  })
+                }}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {event.status === 'scheduled' && <DirectPayForm eventId={event.id} disabled={pending} />}
       {event.status === 'cancelling' && event.openSeats.length > 0 && (
         <ul className="flex flex-col gap-3">
           {event.openSeats.map((seat) => (

@@ -191,6 +191,8 @@ updated_at            timestamptz not null default now()
 
 **Occurrence writes:** every insert or update goes through `validateGroupOccurrence` (`src/lib/groupOccurrence.ts`). New occurrences require `subscription_tier = 'alchemist'`; editing an existing one does not. A single-day occurrence must fall on a date the block covers and on its weekly rule, inside that day's `start_time`–`end_time`. A session that runs past midnight in the block timezone needs `start_date`, `end_date`, and no weekly rule, and those dates bound the occurrence; daily hours are ignored. `format` is `virtual` or `in_person` and must fit the session type and the block (`both` on the block allows either). `start_datetime` and `end_datetime` are supplied by the caller. The function does not derive the end from `duration_minutes`.
 
+**Calendar (0018 column, application sync):** `google_event_id` is one outbound Google event for the occurrence. The app creates it when the occurrence is created, patches it when the time or capacity changes, and deletes it when status becomes `cancelled`. A failed write leaves the occurrence saved. No connected calendar is not an error. A connected calendar with a missing id, or a cancelled row that still has an id, shows the Guide a retry.
+
 ---
 
 ## bookings
@@ -238,6 +240,8 @@ A non-cancelled `pending_payment` row IS the slot hold during checkout. Abandone
 **One seat per client (0018):** partial unique index `one_seat_per_seeker_per_occurrence` on `(occurrence_id, seeker_id)` where `status <> 'cancelled'` and both ids are not null.
 
 **Group seat insert (0018):** `book_group_seat(occurrence_id, seeker_id, confirmation_mode, status, payment_status, notes)` returns `table(booking_id uuid, error text)`. One row: `booking_id` set and `error` null on success. `error` is `started` (`start_datetime <= now()`), `already_booked`, or `full` when the seat is not granted, with `booking_id` null. It locks the occurrence `for update`. It raises `not_found` (missing, null seeker, or status other than `scheduled`). A value the bookings checks reject still raises. Inside that lock, before the three denial returns, it sets `status = 'cancelled'` and `cancellation_reason = 'payment_abandoned'` on this occurrence's stale holds: `pending_payment` and `payment_status = 'unpaid'` and `created_at` older than 30 minutes. Offsite rows are never included. Because those denials return, the cancel commits with the call. Capacity is then the count of remaining non-cancelled seats, so a fresh unpaid hold and an offsite `pending_payment` both count. The function does not cancel the Stripe PaymentIntent. It copies `session_occurrences.format` onto `booked_format`, and copies block location only when that format is `in_person`. Execute is granted to `service_role` only. A group seat does not get its own `bookings.google_event_id`; the occurrence row holds the one outbound event.
+
+**Guide-added direct seat (0019, not applied until you run it):** `add_offsite_group_seat(occurrence_id, guest_name, guest_email)` locks the occurrence and inserts one confirmed seat with `seeker_id` null, `payment_status = 'offsite'`, and no Stripe ids. It counts toward capacity and is not expired by the 30-minute hold. Duplicate `guest_email` on that occurrence returns `already_booked`. A full event returns `full`. Missing or not `scheduled` raises `not_found`. Cancelling it does not refund and does not create an offsite obligation. Execute is granted to `service_role` only.
 
 ---
 

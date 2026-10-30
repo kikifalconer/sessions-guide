@@ -186,6 +186,9 @@ export type CancellationEmailInput = {
   // actually changed hands (F-21).
   offsiteRefundPercent: number
   paymentStatus: 'paid' | 'unpaid' | 'refunded' | 'offsite'
+  // Extra line on the Guide's existing cancellation email. Used when a client
+  // cancels their own group seat, so the Guide sees the seats still taken.
+  guideNote?: string | null
 }
 
 // Seeker-facing refund line. Calm and specific: states what was refunded and
@@ -241,6 +244,10 @@ function cancellationPractitionerBody(input: CancellationEmailInput): string {
     lines.push('')
     lines.push(`A refund of $${input.refundAmount.toFixed(2)} has been issued to the seeker.`)
   }
+  if (input.guideNote) {
+    lines.push('')
+    lines.push(input.guideNote)
+  }
   return lines.join('\n')
 }
 
@@ -278,6 +285,46 @@ export async function sendCancellationEmails(input: CancellationEmailInput): Pro
       'cancellation:practitioner'
     )
   }
+}
+
+export async function sendGroupSeatEmails(input: {
+  clientEmail: string
+  clientSubject: string
+  clientText: string
+  guideEmail: string | null
+  guideSubject: string
+  guideText: string
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.RESEND_FROM_EMAIL
+  if (!apiKey || !from) return
+  const resend = new Resend(apiKey)
+  if (input.clientEmail) {
+    await deliver(
+      resend,
+      { from, to: input.clientEmail, subject: input.clientSubject, text: input.clientText },
+      'group-seat:client'
+    )
+  }
+  if (input.guideEmail) {
+    await deliver(
+      resend,
+      { from, to: input.guideEmail, subject: input.guideSubject, text: input.guideText },
+      'group-seat:guide'
+    )
+  }
+}
+
+export async function sendGroupClientNotice(input: {
+  to: string
+  subject: string
+  text: string
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.RESEND_FROM_EMAIL
+  if (!apiKey || !from || !input.to) return
+  const resend = new Resend(apiKey)
+  await deliver(resend, { from, to: input.to, subject: input.subject, text: input.text }, 'group-cancel:client')
 }
 
 // --- Review request email -----------------------------------------------

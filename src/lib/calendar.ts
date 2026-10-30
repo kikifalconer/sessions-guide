@@ -276,6 +276,34 @@ export async function insertEvent(
   return json.id ?? null
 }
 
+// Patches an existing event. 404/410 means Google no longer has it, so the
+// caller can insert a replacement. Other failures stay failures.
+export async function updateEvent(
+  accessToken: string,
+  calendarId: string,
+  eventId: string,
+  event: { summary: string; description?: string; startIso: string; endIso: string }
+): Promise<'updated' | 'missing' | 'failed'> {
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+      calendarId
+    )}/events/${encodeURIComponent(eventId)}`,
+    {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        summary: event.summary,
+        description: event.description,
+        start: { dateTime: event.startIso },
+        end: { dateTime: event.endIso },
+      }),
+    }
+  )
+  if (res.status === 404 || res.status === 410) return 'missing'
+  if (!res.ok) return 'failed'
+  return 'updated'
+}
+
 // Best-effort delete; a 404/410 (already gone) is treated as success.
 export async function deleteEvent(
   accessToken: string,

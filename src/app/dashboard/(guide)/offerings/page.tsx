@@ -2,8 +2,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { BRAND_NAME } from '@/lib/brand'
 import { requirePractitioner } from '../requirePractitioner'
 import SessionsManager from '../SessionsManager'
-import { seatBlocksOccurrenceClose } from '@/lib/groupBooking'
-import type { GuideBlock, GuideEvent, OpenSeat } from '../groupEventTypes'
+import { isGuideAddedOffsiteSeat, seatBlocksOccurrenceClose } from '@/lib/groupBooking'
+import type { DirectSeat, GuideBlock, GuideEvent, OpenSeat } from '../groupEventTypes'
 import PageHeader from '@/components/dashboard/PageHeader'
 import PracticeNav from '@/components/dashboard/PracticeNav'
 
@@ -45,7 +45,7 @@ export default async function DashboardOfferingsPage() {
     admin
       .from('session_occurrences')
       .select(
-        'id, session_type_id, availability_block_id, format, start_datetime, end_datetime, capacity, status'
+        'id, session_type_id, availability_block_id, format, start_datetime, end_datetime, capacity, status, google_event_id'
       )
       .eq('practitioner_id', practitioner.id),
   ])
@@ -54,7 +54,7 @@ export default async function DashboardOfferingsPage() {
   const seatResult = occurrenceIds.length
     ? await admin
         .from('bookings')
-        .select('id, occurrence_id, status, seeker_id, guest_name')
+        .select('id, occurrence_id, status, seeker_id, guest_name, guest_email, payment_status')
         .eq('practitioner_id', practitioner.id)
         .in('occurrence_id', occurrenceIds)
         .neq('status', 'cancelled')
@@ -90,7 +90,10 @@ export default async function DashboardOfferingsPage() {
   }))
   const blockZone = new Map(blocks.map((block) => [block.id, block.timezone]))
 
-  const seatsByOccurrence = new Map<string, OpenSeat[]>()
+  const seatsByOccurrence = new Map<
+    string,
+    Array<OpenSeat & { seekerId: string | null; paymentStatus: string | null; email: string }>
+  >()
   for (const seat of seatRows ?? []) {
     const occurrenceId = seat.occurrence_id as string
     const seekerId = (seat.seeker_id as string | null) ?? null
@@ -101,9 +104,19 @@ export default async function DashboardOfferingsPage() {
       id: seat.id as string,
       clientName: named || guest || 'A client',
       status: seat.status as string,
+      seekerId,
+      paymentStatus: (seat.payment_status as string | null) ?? null,
+      email: ((seat.guest_email as string | null) ?? '').trim(),
     })
     seatsByOccurrence.set(occurrenceId, list)
   }
+
+  const { data: calendarRow } = await admin
+    .from('calendar_integrations')
+    .select('sync_enabled')
+    .eq('practitioner_id', practitioner.id)
+    .maybeSingle()
+  const calendarConnected = Boolean(calendarRow?.sync_enabled)
 
   const events: GuideEvent[] = (occurrenceRows ?? []).map((row) => {
     const id = row.id as string
@@ -120,8 +133,26 @@ export default async function DashboardOfferingsPage() {
       status,
       seatsTaken: seats.length,
       timezone: blockZone.get(row.availability_block_id as string) ?? 'UTC',
+      googleEventId: (row.google_event_id as string | null) ?? null,
+      calendarConnected,
       // Completed clients stay in the seat count. They are not a failed refund.
-      openSeats: status === 'cancelling' ? seats.filter((seat) => seatBlocksOccurrenceClose(seat.status)) : [],
+      openSeats:
+        status === 'cancelling' ? seats.filter((seat) => seatBlocksOccurrenceClose(seat.status)) : [],
+      directSeats: seats
+        .filter((seat) =>
+          isGuideAddedOffsiteSeat({
+            occurrenceId: id,
+            seekerId: seat.seekerId,
+            paymentStatus: seat.paymentStatus,
+          })
+        )
+        .map(
+          (seat): DirectSeat => ({
+            id: seat.id,
+            clientName: seat.clientName,
+            email: seat.email,
+          })
+        ),
     }
   })
 

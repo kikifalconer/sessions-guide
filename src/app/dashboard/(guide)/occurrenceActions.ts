@@ -5,8 +5,15 @@ import { DateTime } from 'luxon'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { liveFreeBusyForWindow } from '@/lib/calendar'
+import { syncOccurrenceCalendar } from '@/lib/calendarSync'
 import { cancelBooking } from '@/lib/cancellation'
-import { seatBlocksOccurrenceClose } from '@/lib/groupBooking'
+import {
+  directSeatDenialMessage,
+  directSeatInput,
+  isGuideAddedOffsiteSeat,
+  seatBlocksOccurrenceClose,
+} from '@/lib/groupBooking'
+import { expireStaleHolds } from '@/app/[slug]/book/[sessionTypeId]/actions'
 import { validateGroupOccurrence, type GroupOccurrenceBlock } from '@/lib/groupOccurrence'
 import type { CancelEventResult, EventActionResult, GroupEventInput, TimeConflict } from './groupEventTypes'
 
@@ -239,21 +246,26 @@ export async function createGroupEvent(input: GroupEventInput): Promise<EventAct
     return { ok: false, error: 'That time conflicts with:', conflicts }
   }
 
-  const { error } = await admin.from('session_occurrences').insert({
-    practitioner_id: user.id,
-    session_type_id: sessionType.id,
-    availability_block_id: block.id,
-    format: validated.row.format,
-    start_datetime: validated.row.startDatetime,
-    end_datetime: validated.row.endDatetime,
-    capacity: validated.row.capacity,
-    status: 'scheduled',
-  })
-  if (error) {
+  const { data: created, error } = await admin
+    .from('session_occurrences')
+    .insert({
+      practitioner_id: user.id,
+      session_type_id: sessionType.id,
+      availability_block_id: block.id,
+      format: validated.row.format,
+      start_datetime: validated.row.startDatetime,
+      end_datetime: validated.row.endDatetime,
+      capacity: validated.row.capacity,
+      status: 'scheduled',
+    })
+    .select('id')
+    .single()
+  if (error || !created) {
     const mapped = overlapMessage(error)
     return { ok: false, error: mapped ?? GENERIC_ERROR }
   }
 
+  await syncOccurrenceCalendar(created.id as string)
   revalidate()
   return { ok: true }
 }
@@ -319,6 +331,7 @@ export async function updateGroupEvent(
       .eq('practitioner_id', user.id)
       .eq('status', 'scheduled')
     if (error) return { ok: false, error: GENERIC_ERROR }
+    await syncOccurrenceCalendar(occurrence.id as string)
     revalidate()
     return { ok: true }
   }
@@ -377,6 +390,7 @@ export async function updateGroupEvent(
     return { ok: false, error: mapped ?? GENERIC_ERROR }
   }
 
+  await syncOccurrenceCalendar(occurrence.id as string)
   revalidate()
   return { ok: true }
 }
@@ -402,6 +416,7 @@ async function finishCancellation(
     .eq('practitioner_id', practitionerId)
     .eq('status', 'cancelling')
   if (error) return 'cancelling'
+  await syncOccurrenceCalendar(occurrenceId)
   return 'cancelled'
 }
 
@@ -410,7 +425,11 @@ async function cancelOneSeat(
   bookingId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
-    const result = await cancelBooking({ bookingId, cancelledBy: 'practitioner' })
+    const result = await cancelBooking({
+      bookingId,
+      cancelledBy: 'practitioner',
+      notice: 'event',
+    })
     if (!result.ok) return { ok: false, error: result.error }
     return { ok: true }
   } catch {
@@ -511,4 +530,110 @@ export async function retryGroupSeat(
   const status = await finishCancellation(admin, occurrence.id, user.id)
   revalidate()
   return { ok: true, status, failed }
+}
+
+export async function retryOccurrenceCalendar(occurrenceId: string): Promise<EventActionResult> {
+  const user = await requireUser()
+  if (!user) return { ok: false, error: 'Sign in to continue.' }
+  const admin = createAdminClient()
+  const { data: occurrence } = await admin
+    .from('session_occurrences')
+    .select('id')
+    .eq('id', occurrenceId)
+    .eq('practitioner_id', user.id)
+    .maybeSingle()
+  if (!occurrence) return { ok: false, error: NOT_FOUND }
+  const synced = await syncOccurrenceCalendar(occurrenceId)
+  revalidate()
+  if (synced === 'failed') return { ok: false, error: 'Calendar not synced. Try again.' }
+  return { ok: true }
+}
+
+export async function addDirectSeat(
+  occurrenceId: string,
+  name: string,
+  email: string
+): Promise<EventActionResult> {
+  const user = await requireUser()
+  if (!user) return { ok: false, error: 'Sign in to continue.' }
+  const parsed = directSeatInput(name, email)
+  if ('error' in parsed) return { ok: false, error: parsed.error }
+
+  const admin = createAdminClient()
+  const { data: occurrence } = await admin
+    .from('session_occurrences')
+    .select('id, status')
+    .eq('id', occurrenceId)
+    .eq('practitioner_id', user.id)
+    .maybeSingle()
+  if (!occurrence) return { ok: false, error: NOT_FOUND }
+  if (occurrence.status !== 'scheduled') {
+    return { ok: false, error: 'This event is no longer available.' }
+  }
+
+  await expireStaleHolds(user.id)
+
+  const { data: rpcData, error: rpcError } = await admin.rpc('add_offsite_group_seat', {
+    p_occurrence_id: occurrenceId,
+    p_guest_name: parsed.name,
+    p_guest_email: parsed.email,
+  })
+  if (rpcError) {
+    const message = rpcError.message ?? ''
+    if (message.includes('not_found')) return { ok: false, error: directSeatDenialMessage('not_found') }
+    if (rpcError.code === 'PGRST202' || message.includes('add_offsite_group_seat')) {
+      return { ok: false, error: 'Direct seats need a database update before they can be added.' }
+    }
+    return { ok: false, error: GENERIC_ERROR }
+  }
+
+  const rpcRow = (Array.isArray(rpcData) ? rpcData[0] : rpcData) as
+    | { booking_id: string | null; error: string | null }
+    | null
+  const code = rpcRow?.error
+  if (code === 'full' || code === 'already_booked' || code === 'not_found') {
+    return { ok: false, error: directSeatDenialMessage(code) }
+  }
+  if (code || !rpcRow?.booking_id) return { ok: false, error: GENERIC_ERROR }
+
+  revalidate()
+  return { ok: true }
+}
+
+export async function removeDirectSeat(
+  occurrenceId: string,
+  bookingId: string
+): Promise<EventActionResult> {
+  const user = await requireUser()
+  if (!user) return { ok: false, error: 'Sign in to continue.' }
+  const admin = createAdminClient()
+  const { data: seat } = await admin
+    .from('bookings')
+    .select('id, seeker_id, payment_status, occurrence_id, status')
+    .eq('id', bookingId)
+    .eq('occurrence_id', occurrenceId)
+    .eq('practitioner_id', user.id)
+    .maybeSingle()
+  if (!seat) return { ok: false, error: NOT_FOUND }
+  if (
+    !isGuideAddedOffsiteSeat({
+      occurrenceId: (seat.occurrence_id as string | null) ?? null,
+      seekerId: (seat.seeker_id as string | null) ?? null,
+      paymentStatus: (seat.payment_status as string | null) ?? null,
+    })
+  ) {
+    return { ok: false, error: 'That seat cannot be removed this way.' }
+  }
+  if (seat.status === 'cancelled') {
+    revalidate()
+    return { ok: true }
+  }
+  const result = await cancelBooking({
+    bookingId,
+    cancelledBy: 'practitioner',
+    notice: 'seat',
+  })
+  if (!result.ok) return { ok: false, error: result.error }
+  revalidate()
+  return { ok: true }
 }

@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveSeekerIdentity } from '@/lib/seekerIdentity'
-import { getValidAccessToken, insertEvent, deleteEvent } from '@/lib/calendar'
+import { getValidAccessToken, insertEvent, updateEvent, deleteEvent } from '@/lib/calendar'
+import { occurrenceCalendarAction, occurrenceCalendarDescription } from '@/lib/groupBooking'
 
 // Outbound Google Calendar sync, route-agnostic (mirrors the refund engine).
 // Every call is NON-FATAL: a calendar failure must never block or roll back a
@@ -132,5 +133,89 @@ export async function deleteCalendarEventForBooking(bookingId: string): Promise<
   } catch (err) {
     // Never block a cancellation/refund on calendar failure.
     console.error('deleteCalendarEventForBooking failed', bookingId, err)
+  }
+}
+
+// One Google event per occurrence. The occurrence row is already saved when
+// this runs. A failure leaves the row in place and returns 'failed' so the
+// Guide can retry. No connected calendar is 'skipped', not a failure.
+export async function syncOccurrenceCalendar(
+  occurrenceId: string
+): Promise<'synced' | 'skipped' | 'failed'> {
+  try {
+    const admin = createAdminClient()
+    const { data: occurrence, error } = await admin
+      .from('session_occurrences')
+      .select(
+        `id, practitioner_id, status, google_event_id, format, start_datetime, end_datetime, capacity,
+         session_types ( name ),
+         availability_blocks ( location_display )`
+      )
+      .eq('id', occurrenceId)
+      .maybeSingle()
+    if (error || !occurrence) return 'failed'
+
+    const { data: integration } = await admin
+      .from('calendar_integrations')
+      .select('calendar_id, sync_enabled')
+      .eq('practitioner_id', occurrence.practitioner_id)
+      .maybeSingle()
+    if (!integration?.sync_enabled) return 'skipped'
+
+    const accessToken = await getValidAccessToken(occurrence.practitioner_id as string)
+    if (!accessToken) return 'failed'
+
+    const calendarId = integration.calendar_id ?? 'primary'
+    const googleEventId = (occurrence.google_event_id as string | null) ?? null
+    const action = occurrenceCalendarAction(occurrence.status as string, googleEventId)
+
+    if (action === 'skip') return 'synced'
+
+    if (action === 'delete' && googleEventId) {
+      try {
+        await deleteEvent(accessToken, calendarId, googleEventId)
+      } catch (err) {
+        console.error('syncOccurrenceCalendar: delete failed', occurrenceId, err)
+        return 'failed'
+      }
+      const { error: clearError } = await admin
+        .from('session_occurrences')
+        .update({ google_event_id: null })
+        .eq('id', occurrenceId)
+      return clearError ? 'failed' : 'synced'
+    }
+
+    const sessionType = occurrence.session_types as unknown as { name: string } | null
+    const block = occurrence.availability_blocks as unknown as { location_display: string | null } | null
+    const format = occurrence.format === 'in_person' ? 'in_person' : 'virtual'
+    const event = {
+      summary: sessionType?.name ?? 'Group session',
+      description: occurrenceCalendarDescription({
+        format,
+        capacity: Number(occurrence.capacity),
+        locationDisplay: block?.location_display ?? null,
+      }),
+      startIso: occurrence.start_datetime as string,
+      endIso: occurrence.end_datetime as string,
+    }
+
+    let eventId = googleEventId
+    if (eventId) {
+      const updated = await updateEvent(accessToken, calendarId, eventId, event)
+      if (updated === 'updated') return 'synced'
+      if (updated === 'failed') return 'failed'
+      eventId = null
+    }
+
+    const created = await insertEvent(accessToken, calendarId, event)
+    if (!created) return 'failed'
+    const { error: saveError } = await admin
+      .from('session_occurrences')
+      .update({ google_event_id: created })
+      .eq('id', occurrenceId)
+    return saveError ? 'failed' : 'synced'
+  } catch (err) {
+    console.error('syncOccurrenceCalendar failed', occurrenceId, err)
+    return 'failed'
   }
 }
