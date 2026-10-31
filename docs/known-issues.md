@@ -40,6 +40,7 @@ RESOLVED 2026-10-07 (Kiki): Offsite pending_payment bookings are durable by desi
 | GAP-5 | Working tree hygiene (as of 2026-07-02) | Unpushed commits (21), unstaged M10 fix in `explore/[category]/page.tsx`, deleted `hero.jpg` (decision: point at `/images/reikiHero2.jpg` after confirming it exists), untracked stock photos, `verify-seed-manifest.json`. Resolve intentionally, commit-or-discard per file. |
 | GAP-6 | Supabase manual items from Phase 7 | Apply 0010/0011 if not applied; custom SMTP for auth mail; redirect-URL allowlist for magic links. Also: confirm live RLS actually enabled on `bookings` (the one possible `seeker_token` leak). |
 | GAP-7 | Virtual-only search filter lost (TD7) | D19 param standardization dropped it; `discovery.ts` path still exists unused. Reintroduce only as a shared tri-state across search AND city surfaces. |
+| GS-1 | Group-session production click-through not run | Steps are `docs/group-sessions-test.md`. Run them on production after `feat/group-sessions` merges. 0018 applied 2026-10-26. 0019 applied 2026-10-30. Vercel plan is Pro, so the hold cron stays every 15 minutes. |
 
 ## ⚪ Tracked Debt (not launch-blocking; don't let it grow)
 

@@ -48,7 +48,9 @@ Phase 0 verdict (2026-07-26): all 13 files live in `supabase/migrations/` — **
 | 0016 | offsite_paid_at | `bookings.offsite_paid_at`. In repo; not part of the 2026-07-26 live verdict. |
 | 0017 | favorites | Seeker favorites of a practitioner (D29). In repo; not part of the 2026-07-26 live verdict. |
 | 0018 | group_sessions | `session_types.max_capacity`, `session_occurrences`, `bookings.occurrence_id`, rebuilt `no_overlapping_bookings`, `book_group_seat` (returns `booking_id`/`error`; cancels stale unpaid holds before `started`/`already_booked`/`full`, and those three return a row so the cancel commits). Applied 2026-10-26 in the Supabase SQL editor. |
-| 0019 | offsite_group_seat | `add_offsite_group_seat` for a Guide-added seat paid outside the platform. No new column (`google_event_id` is already on `session_occurrences`). In repo; not applied until you run the SQL. |
+| 0019 | offsite_group_seat | `add_offsite_group_seat` for a Guide-added seat paid outside the platform. No new column (`google_event_id` is already on `session_occurrences`). Applied 2026-10-30 in the Supabase SQL editor. |
+
+Group-session cron: Vercel team `kiki-falconer-s-projects` is plan `pro` (active, confirmed 2026-10-30 via the team billing API). `/api/cron/expire-group-holds` stays `*/15 * * * *`. A Hobby plan would only allow a daily cron. Live click-through is `docs/group-sessions-test.md` and has not been run on production yet.
 
 ---
 
